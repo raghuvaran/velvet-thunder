@@ -302,6 +302,8 @@
 
                 // Load data
                 loadData();
+                // Save key on successful decrypt
+                saveKey(passphrase);
                 document.getElementById('unlock-screen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
             } catch (e) {
@@ -542,6 +544,20 @@
             a.download = filename;
             a.click();
         }
+
+        // Persist passphrase in localStorage
+        function saveKey(key) { localStorage.setItem('vault_key', key); }
+        function loadKey() { return localStorage.getItem('vault_key'); }
+        function clearKey() { localStorage.removeItem('vault_key'); }
+
+        // Auto-unlock if key is saved
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = loadKey();
+            if (saved) {
+                document.getElementById('passphrase').value = saved;
+                unlock();
+            }
+        });
 
         // Enter key to unlock
         document.getElementById('passphrase').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
