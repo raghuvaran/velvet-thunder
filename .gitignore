@@ -1,0 +1,4 @@
+# Ignore unencrypted database files
+*.db
+*.sqlite
+backups/

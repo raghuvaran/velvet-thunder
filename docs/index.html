@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault</title>
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --surface: #1a1a1a;
+            --border: #2a2a2a;
+            --text: #e0e0e0;
+            --muted: #888;
+            --accent: #6c9eff;
+            --accent-dim: #4a7ae0;
+            --green: #4caf50;
+            --red: #ef5350;
+            --orange: #ff9800;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container { max-width: 1200px; margin: 0 auto; }
+        h1 { font-size: 1.5rem; margin-bottom: 20px; color: var(--accent); }
+        h2 { font-size: 1.1rem; margin-bottom: 12px; color: var(--muted); }
+
+        /* Unlock screen */
+        #unlock-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 60vh;
+            gap: 16px;
+        }
+        #unlock-screen input {
+            width: 100%;
+            max-width: 400px;
+            padding: 12px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 1rem;
+        }
+        #unlock-screen button {
+            padding: 12px 32px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        #unlock-screen button:hover { background: var(--accent-dim); }
+        .error { color: var(--red); font-size: 0.9rem; }
+        .status { color: var(--muted); font-size: 0.9rem; }
+
+        /* Dashboard */
+        #dashboard { display: none; }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+        .stat-card .label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filters input, .filters select {
+            padding: 8px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            font-size: 0.9rem;
+        }
+        .filters button {
+            padding: 8px 16px;
+            background: var(--accent);
+            color: #000;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+        }
+
+        /* Table */
+        .table-wrapper { overflow-x: auto; margin-bottom: 24px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.85rem;
+        }
+        th, td {
+            padding: 10px 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { color: var(--muted); font-weight: 600; white-space: nowrap; }
+        tr:hover { background: var(--surface); }
+        .amount { font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; }
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            background: var(--border);
+        }
+
+        /* Detail modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 100;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal h3 { margin-bottom: 12px; }
+        .modal .close { float: right; cursor: pointer; color: var(--muted); font-size: 1.2rem; }
+        .item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
+
+        /* Export buttons */
+        .export-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .export-bar button {
+            padding: 6px 14px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+        .export-bar button:hover { border-color: var(--accent); }
+
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
+        .tab {
+            padding: 8px 16px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+            color: var(--muted);
+        }
+        .tab.active { border-bottom-color: var(--bg); color: var(--accent); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Unlock Screen -->
+        <div id="unlock-screen">
+            <h1>🔒 Vault</h1>
+            <input type="password" id="passphrase" placeholder="Enter passphrase" autofocus>
+            <button onclick="unlock()">Decrypt</button>
+            <div id="unlock-status" class="status"></div>
+            <div id="unlock-error" class="error"></div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard">
+            <h1>📊 Receipt Vault</h1>
+
+            <div class="stats-grid" id="stats-grid"></div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('receipts')">Receipts</div>
+                <div class="tab" onclick="showTab('items')">Items</div>
+                <div class="tab" onclick="showTab('analytics')">Analytics</div>
+            </div>
+
+            <div id="tab-receipts">
+                <div class="filters">
+                    <input type="date" id="filter-from" placeholder="From">
+                    <input type="date" id="filter-to" placeholder="To">
+                    <input type="text" id="filter-store" placeholder="Store...">
+                    <select id="filter-category"><option value="">All categories</option></select>
+                    <button onclick="applyFilters()">Filter</button>
+                </div>
+                <div class="export-bar">
+                    <button onclick="exportCSV()">📥 Export CSV</button>
+                    <button onclick="exportJSON()">📥 Export JSON</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="receipts-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Store</th>
+                                <th>Category</th>
+                                <th>Items</th>
+                                <th class="amount">Total</th>
+                                <th>Payment</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-items" style="display:none">
+                <div class="filters">
+                    <input type="text" id="filter-item" placeholder="Search items...">
+                    <button onclick="filterItems()">Search</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="items-table">
+                        <thead>
+                            <tr>
+                                <th>Item</th>
+                                <th>Category</th>
+                                <th class="amount">Unit Price</th>
+                                <th>Qty</th>
+                                <th class="amount">Total</th>
+                                <th>Store</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="tab-analytics" style="display:none">
+                <div class="stats-grid" id="analytics-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detail Modal -->
+    <div class="modal-overlay" id="modal" onclick="closeModal(event)">
+        <div class="modal" id="modal-content"></div>
+    </div>
+
+    <!-- sql.js for reading SQLite in browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+    <script>
+        let db = null;
+        let allReceipts = [];
+        let allItems = [];
+
+        const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/vault.enc';
+
+        async function unlock() {
+            const passphrase = document.getElementById('passphrase').value;
+            const status = document.getElementById('unlock-status');
+            const error = document.getElementById('unlock-error');
+            error.textContent = '';
+            status.textContent = 'Fetching vault...';
+
+            try {
+                // Fetch encrypted file
+                const resp = await fetch(VAULT_URL);
+                if (!resp.ok) throw new Error('Failed to fetch vault file');
+                const encData = await resp.arrayBuffer();
+                status.textContent = 'Decrypting...';
+
+                // Decrypt (OpenSSL format: Salted__<8 bytes salt><ciphertext>)
+                const decrypted = await decryptOpenSSL(new Uint8Array(encData), passphrase);
+                status.textContent = 'Loading database...';
+
+                // Load SQLite
+                const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
+                db = new SQL.Database(decrypted);
+
+                // Load data
+                loadData();
+                document.getElementById('unlock-screen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            } catch (e) {
+                error.textContent = 'Decryption failed — wrong passphrase?';
+                status.textContent = '';
+                console.error(e);
+            }
+        }
+
+        async function decryptOpenSSL(data, passphrase) {
+            // OpenSSL enc format: "Salted__" + 8-byte salt + ciphertext
+            const header = new TextDecoder().decode(data.slice(0, 8));
+            if (header !== 'Salted__') throw new Error('Invalid encrypted file format');
+
+            const salt = data.slice(8, 16);
+            const ciphertext = data.slice(16);
+
+            // Derive key+IV using PBKDF2 (matching openssl -pbkdf2 -iter 100000)
+            const enc = new TextEncoder();
+            const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveBits']);
+            const bits = await crypto.subtle.deriveBits(
+                { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
+                keyMaterial,
+                384 // 256 bits key + 128 bits IV
+            );
+
+            const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), { name: 'AES-CBC' }, false, ['decrypt']);
+            const iv = bits.slice(32, 48);
+
+            const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: new Uint8Array(iv) }, key, ciphertext);
+            return new Uint8Array(decrypted);
+        }
+
+        function loadData() {
+            // Load receipts
+            const receipts = db.exec("SELECT * FROM receipts ORDER BY purchase_date DESC, purchase_time DESC");
+            if (receipts.length > 0) {
+                const cols = receipts[0].columns;
+                allReceipts = receipts[0].values.map(row => {
+                    const obj = {};
+                    cols.forEach((c, i) => obj[c] = row[i]);
+                    return obj;
+                });
+            }
+
+            // Load items with receipt info
+            const items = db.exec(`
+                SELECT li.*, r.store_name, r.purchase_date 
+                FROM line_items li JOIN receipts r ON li.receipt_id = r.id 
+                ORDER BY r.purchase_date DESC
+            `);
+            if (items.length > 0) {
+                const cols = items[0].columns;
+                allItems = items[0].values.map(row => {
+                    const obj = {};
+                    cols.forEach((c, i) => obj[c] = row[i]);
+                    return obj;
+                });
+            }
+
+            renderStats();
+            renderReceipts(allReceipts);
+            renderItems(allItems);
+            populateFilters();
+            renderAnalytics();
+        }
+
+        function renderStats() {
+            const total = allReceipts.reduce((s, r) => s + (r.total || 0), 0);
+            const grid = document.getElementById('stats-grid');
+            grid.innerHTML = `
+                <div class="stat-card"><div class="value">${allReceipts.length}</div><div class="label">Total Receipts</div></div>
+                <div class="stat-card"><div class="value">$${total.toFixed(2)}</div><div class="label">Total Spent</div></div>
+                <div class="stat-card"><div class="value">$${allReceipts.length ? (total / allReceipts.length).toFixed(2) : '0.00'}</div><div class="label">Avg per Receipt</div></div>
+                <div class="stat-card"><div class="value">${allItems.length}</div><div class="label">Total Items Tracked</div></div>
+            `;
+        }
+
+        function renderReceipts(receipts) {
+            const tbody = document.querySelector('#receipts-table tbody');
+            tbody.innerHTML = receipts.map(r => `
+                <tr onclick="showReceipt(${r.id})" style="cursor:pointer">
+                    <td>${r.purchase_date || ''}${r.purchase_time ? ' ' + r.purchase_time : ''}</td>
+                    <td>${r.store_name || ''}</td>
+                    <td><span class="category-badge">${r.category || '-'}</span></td>
+                    <td>${allItems.filter(i => i.receipt_id === r.id).length}</td>
+                    <td class="amount">$${(r.total || 0).toFixed(2)}</td>
+                    <td>${r.payment_method || ''}${r.card_last4 ? ' •' + r.card_last4 : ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderItems(items) {
+            const tbody = document.querySelector('#items-table tbody');
+            tbody.innerHTML = items.map(i => `
+                <tr>
+                    <td>${i.item_name}</td>
+                    <td><span class="category-badge">${i.category || '-'}</span></td>
+                    <td class="amount">${i.unit_price ? '$' + i.unit_price.toFixed(2) : '-'}</td>
+                    <td>${i.quantity || 1}${i.unit ? ' ' + i.unit : ''}</td>
+                    <td class="amount">$${(i.total_price || 0).toFixed(2)}</td>
+                    <td>${i.store_name || ''}</td>
+                    <td>${i.purchase_date || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        function renderAnalytics() {
+            const grid = document.getElementById('analytics-grid');
+            
+            // By category
+            const byCat = {};
+            allReceipts.forEach(r => {
+                const cat = r.category || 'uncategorized';
+                byCat[cat] = (byCat[cat] || 0) + (r.total || 0);
+            });
+            
+            // By store
+            const byStore = {};
+            allReceipts.forEach(r => {
+                byStore[r.store_name] = (byStore[r.store_name] || 0) + (r.total || 0);
+            });
+
+            // Top items
+            const byItem = {};
+            allItems.forEach(i => {
+                const name = i.item_name.toLowerCase();
+                if (!byItem[name]) byItem[name] = { name: i.item_name, count: 0, total: 0 };
+                byItem[name].count++;
+                byItem[name].total += i.total_price || 0;
+            });
+
+            let html = '<h2>By Category</h2><div class="table-wrapper"><table><thead><tr><th>Category</th><th class="amount">Spent</th></tr></thead><tbody>';
+            Object.entries(byCat).sort((a, b) => b[1] - a[1]).forEach(([cat, total]) => {
+                html += `<tr><td>${cat}</td><td class="amount">$${total.toFixed(2)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            html += '<h2>By Store</h2><div class="table-wrapper"><table><thead><tr><th>Store</th><th class="amount">Spent</th></tr></thead><tbody>';
+            Object.entries(byStore).sort((a, b) => b[1] - a[1]).forEach(([store, total]) => {
+                html += `<tr><td>${store}</td><td class="amount">$${total.toFixed(2)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            html += '<h2>Top Items</h2><div class="table-wrapper"><table><thead><tr><th>Item</th><th>Times Bought</th><th class="amount">Total Spent</th></tr></thead><tbody>';
+            Object.values(byItem).sort((a, b) => b.count - a.count).slice(0, 15).forEach(item => {
+                html += `<tr><td>${item.name}</td><td>${item.count}</td><td class="amount">$${item.total.toFixed(2)}</td></tr>`;
+            });
+            html += '</tbody></table></div>';
+
+            grid.innerHTML = html;
+        }
+
+        function populateFilters() {
+            const sel = document.getElementById('filter-category');
+            const cats = [...new Set(allReceipts.map(r => r.category).filter(Boolean))].sort();
+            cats.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
+        }
+
+        function applyFilters() {
+            let filtered = [...allReceipts];
+            const from = document.getElementById('filter-from').value;
+            const to = document.getElementById('filter-to').value;
+            const store = document.getElementById('filter-store').value.toLowerCase();
+            const cat = document.getElementById('filter-category').value;
+
+            if (from) filtered = filtered.filter(r => r.purchase_date >= from);
+            if (to) filtered = filtered.filter(r => r.purchase_date <= to);
+            if (store) filtered = filtered.filter(r => (r.store_name || '').toLowerCase().includes(store));
+            if (cat) filtered = filtered.filter(r => r.category === cat);
+
+            renderReceipts(filtered);
+        }
+
+        function filterItems() {
+            const q = document.getElementById('filter-item').value.toLowerCase();
+            const filtered = q ? allItems.filter(i => i.item_name.toLowerCase().includes(q)) : allItems;
+            renderItems(filtered);
+        }
+
+        function showReceipt(id) {
+            const r = allReceipts.find(x => x.id === id);
+            const items = allItems.filter(i => i.receipt_id === id);
+            const modal = document.getElementById('modal');
+            const content = document.getElementById('modal-content');
+            
+            content.innerHTML = `
+                <span class="close" onclick="document.getElementById('modal').classList.remove('active')">✕</span>
+                <h3>${r.store_name}</h3>
+                <p style="color:var(--muted)">${r.purchase_date}${r.purchase_time ? ' at ' + r.purchase_time : ''} • ${r.store_location || ''}</p>
+                <hr style="border-color:var(--border);margin:12px 0">
+                ${items.map(i => `
+                    <div class="item-row">
+                        <span>${i.item_name} ${i.quantity > 1 ? '×' + i.quantity : ''}${i.unit ? ' ' + i.unit : ''}</span>
+                        <span class="amount">$${(i.total_price || 0).toFixed(2)}${i.discount ? ' (-$' + i.discount.toFixed(2) + ')' : ''}</span>
+                    </div>
+                `).join('')}
+                <hr style="border-color:var(--border);margin:12px 0">
+                <div class="item-row"><span>Subtotal</span><span class="amount">$${(r.subtotal || 0).toFixed(2)}</span></div>
+                <div class="item-row"><span>Tax</span><span class="amount">$${(r.tax || 0).toFixed(2)}</span></div>
+                ${r.tip ? `<div class="item-row"><span>Tip</span><span class="amount">$${r.tip.toFixed(2)}</span></div>` : ''}
+                <div class="item-row" style="font-weight:700"><span>Total</span><span class="amount">$${(r.total || 0).toFixed(2)}</span></div>
+                <p style="margin-top:12px;color:var(--muted);font-size:0.85rem">${r.payment_method || ''}${r.card_last4 ? ' •••• ' + r.card_last4 : ''}</p>
+            `;
+            modal.classList.add('active');
+        }
+
+        function closeModal(e) { if (e.target === e.currentTarget) e.currentTarget.classList.remove('active'); }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tab).style.display = 'block';
+        }
+
+        function exportCSV() {
+            let csv = 'Date,Store,Category,Total,Tax,Payment,Items\n';
+            allReceipts.forEach(r => {
+                const itemCount = allItems.filter(i => i.receipt_id === r.id).length;
+                csv += `"${r.purchase_date}","${r.store_name}","${r.category || ''}",${r.total},${r.tax || 0},"${r.payment_method || ''}",${itemCount}\n`;
+            });
+            download(csv, 'receipts_export.csv', 'text/csv');
+        }
+
+        function exportJSON() {
+            const data = allReceipts.map(r => ({
+                ...r,
+                items: allItems.filter(i => i.receipt_id === r.id)
+            }));
+            download(JSON.stringify(data, null, 2), 'receipts_export.json', 'application/json');
+        }
+
+        function download(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            a.click();
+        }
+
+        // Enter key to unlock
+        document.getElementById('passphrase').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+    </script>
+</body>
+</html>
