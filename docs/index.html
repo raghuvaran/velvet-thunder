@@ -201,13 +201,18 @@
             margin-bottom: 12px;
         }
         .chart-card canvas {
-            width: 100%;
+            width: 100% !important;
+            height: 100% !important;
+        }
+        .chart-card .chart-container {
+            position: relative;
             height: 220px;
+            width: 100%;
         }
         .chart-card-wide {
             grid-column: 1 / -1;
         }
-        .chart-card-wide canvas {
+        .chart-card-wide .chart-container {
             height: 180px;
         }
     </style>
@@ -512,36 +517,36 @@
             chartsGrid.innerHTML = `
                 <div class="chart-card">
                     <h3>Monthly Spending</h3>
-                    <canvas id="chart-monthly"></canvas>
+                    <div class="chart-container"><canvas id="chart-monthly"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <h3>Spending by Receipt Category</h3>
-                    <canvas id="chart-category"></canvas>
+                    <div class="chart-container"><canvas id="chart-category"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <h3>Item Category Breakdown</h3>
-                    <canvas id="chart-item-cat"></canvas>
+                    <div class="chart-container"><canvas id="chart-item-cat"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <h3>Spending by Day of Week</h3>
-                    <canvas id="chart-dow"></canvas>
+                    <div class="chart-container"><canvas id="chart-dow"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <h3>Top Stores</h3>
-                    <canvas id="chart-stores"></canvas>
+                    <div class="chart-container"><canvas id="chart-stores"></canvas></div>
                 </div>
                 <div class="chart-card">
                     <h3>Top Items by Spend</h3>
-                    <canvas id="chart-items"></canvas>
+                    <div class="chart-container"><canvas id="chart-items"></canvas></div>
                 </div>
                 <div class="chart-card chart-card-wide">
                     <h3>Cumulative Spending Over Time</h3>
-                    <canvas id="chart-cumulative"></canvas>
+                    <div class="chart-container"><canvas id="chart-cumulative"></canvas></div>
                 </div>
             `;
 
             const palette = ['#6c9eff','#ff6b6b','#ffd93d','#6bcb77','#a66cff','#ff8c42','#36d1dc','#f7797d','#c6ffdd','#e2b0ff'];
-            const chartDefaults = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ccc', font: { size: 11 } } } }, scales: {} };
+            const chartDefaults = { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { labels: { color: '#ccc', font: { size: 11 } } } }, scales: {} };
             const darkScales = { x: { ticks: { color: '#888' }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } } };
 
             setTimeout(() => {
