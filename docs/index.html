@@ -302,7 +302,7 @@
 
         const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/vault.enc';
 
-        async function unlock() {
+        async function unlock(isAuto = false) {
             const passphrase = document.getElementById('passphrase').value;
             const status = document.getElementById('unlock-status');
             const error = document.getElementById('unlock-error');
@@ -331,8 +331,17 @@
                 document.getElementById('unlock-screen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
             } catch (e) {
-                error.textContent = 'Decryption failed — wrong passphrase?';
-                status.textContent = '';
+                if (isAuto && autoRetryCount < 3) {
+                    autoRetryCount++;
+                    status.textContent = `Retry ${autoRetryCount}/3 in 3s (CDN may be stale)...`;
+                    error.textContent = '';
+                    setTimeout(() => unlock(true), 3000);
+                } else {
+                    error.textContent = autoRetryCount >= 3
+                        ? 'Decryption failed after retries — vault may still be deploying. Try again in a minute.'
+                        : 'Decryption failed — wrong passphrase?';
+                    status.textContent = '';
+                }
                 console.error(e);
             }
         }
@@ -786,12 +795,13 @@
         function loadKey() { return localStorage.getItem('vault_key'); }
         function clearKey() { localStorage.removeItem('vault_key'); }
 
-        // Auto-unlock if key is saved
+        // Auto-unlock if key is saved (with retry on failure)
+        let autoRetryCount = 0;
         window.addEventListener('DOMContentLoaded', () => {
             const saved = loadKey();
             if (saved) {
                 document.getElementById('passphrase').value = saved;
-                unlock();
+                unlock(true);
             }
         });
 
