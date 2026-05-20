@@ -666,7 +666,7 @@
             ctx.fillRect(0, 0, W, H);
 
             const cx = W * 0.35, cy = H / 2;
-            const radius = Math.min(cx - 20, cy - 20);
+            const radius = Math.max(Math.min(cx - 20, cy - 20), 10);
             const innerRadius = radius * 0.55;
             const total = values.reduce((s, v) => s + v, 0);
             let startAngle = -Math.PI / 2;
