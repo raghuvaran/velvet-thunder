@@ -204,6 +204,12 @@
             width: 100%;
             height: 220px;
         }
+        .chart-card-wide {
+            grid-column: 1 / -1;
+        }
+        .chart-card-wide canvas {
+            height: 180px;
+        }
     </style>
 </head>
 <body>
@@ -293,6 +299,8 @@
         <div class="modal" id="modal-content"></div>
     </div>
 
+    <!-- Chart.js for rich visualizations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.7/chart.umd.min.js"></script>
     <!-- sql.js for reading SQLite in browser -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
     <script>
@@ -444,9 +452,15 @@
             `).join('');
         }
 
+        let chartInstances = [];
+
         function renderAnalytics() {
             const chartsGrid = document.getElementById('charts-grid');
             const grid = document.getElementById('analytics-grid');
+
+            // Destroy previous chart instances
+            chartInstances.forEach(c => c.destroy());
+            chartInstances = [];
 
             // Data aggregation
             const byCat = {};
@@ -489,52 +503,103 @@
                 byItem[name].total += i.total_price || 0;
             });
 
+            // Cumulative spending over time
+            const sortedReceipts = [...allReceipts].sort((a,b) => (a.purchase_date||'').localeCompare(b.purchase_date||''));
+            let cumulative = 0;
+            const cumulData = sortedReceipts.map(r => { cumulative += r.total || 0; return { x: r.purchase_date, y: cumulative }; });
+
             // Build charts HTML
             chartsGrid.innerHTML = `
                 <div class="chart-card">
                     <h3>Monthly Spending</h3>
-                    <canvas id="chart-monthly" width="500" height="250"></canvas>
+                    <canvas id="chart-monthly"></canvas>
                 </div>
                 <div class="chart-card">
-                    <h3>Spending by Category</h3>
-                    <canvas id="chart-category" width="500" height="250"></canvas>
+                    <h3>Spending by Receipt Category</h3>
+                    <canvas id="chart-category"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3>Item Category Breakdown</h3>
-                    <canvas id="chart-item-cat" width="500" height="250"></canvas>
+                    <canvas id="chart-item-cat"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3>Spending by Day of Week</h3>
-                    <canvas id="chart-dow" width="500" height="250"></canvas>
+                    <canvas id="chart-dow"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3>Top Stores</h3>
-                    <canvas id="chart-stores" width="500" height="250"></canvas>
+                    <canvas id="chart-stores"></canvas>
                 </div>
                 <div class="chart-card">
                     <h3>Top Items by Spend</h3>
-                    <canvas id="chart-items" width="500" height="250"></canvas>
+                    <canvas id="chart-items"></canvas>
+                </div>
+                <div class="chart-card chart-card-wide">
+                    <h3>Cumulative Spending Over Time</h3>
+                    <canvas id="chart-cumulative"></canvas>
                 </div>
             `;
 
-            // Draw charts after DOM update
+            const palette = ['#6c9eff','#ff6b6b','#ffd93d','#6bcb77','#a66cff','#ff8c42','#36d1dc','#f7797d','#c6ffdd','#e2b0ff'];
+            const chartDefaults = { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#ccc', font: { size: 11 } } } }, scales: {} };
+            const darkScales = { x: { ticks: { color: '#888' }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } } };
+
             setTimeout(() => {
+                // Monthly bar
                 const months = Object.keys(byMonth).sort();
-                drawBarChart('chart-monthly', months, months.map(m => byMonth[m]), COLORS.accent, '$');
+                chartInstances.push(new Chart(document.getElementById('chart-monthly'), {
+                    type: 'bar',
+                    data: { labels: months, datasets: [{ label: 'Spent', data: months.map(m => byMonth[m]), backgroundColor: '#6c9eff88', borderColor: '#6c9eff', borderWidth: 1, borderRadius: 4 }] },
+                    options: { ...chartDefaults, plugins: { legend: { display: false } }, scales: darkScales }
+                }));
 
+                // Category doughnut
                 const catEntries = Object.entries(byCat).sort((a,b) => b[1] - a[1]);
-                drawDonut('chart-category', catEntries.map(e => e[0]), catEntries.map(e => e[1]));
+                chartInstances.push(new Chart(document.getElementById('chart-category'), {
+                    type: 'doughnut',
+                    data: { labels: catEntries.map(e => e[0]), datasets: [{ data: catEntries.map(e => e[1]), backgroundColor: palette.slice(0, catEntries.length), borderWidth: 0 }] },
+                    options: { ...chartDefaults, plugins: { legend: { position: 'right', labels: { color: '#ccc' } }, tooltip: { callbacks: { label: ctx => `$${ctx.parsed.toFixed(2)} (${((ctx.parsed / catEntries.reduce((s,e)=>s+e[1],0))*100).toFixed(1)}%)` } } } }
+                }));
 
+                // Item category doughnut
                 const itemCatEntries = Object.entries(byItemCat).sort((a,b) => b[1] - a[1]);
-                drawDonut('chart-item-cat', itemCatEntries.map(e => e[0]), itemCatEntries.map(e => e[1]));
+                chartInstances.push(new Chart(document.getElementById('chart-item-cat'), {
+                    type: 'doughnut',
+                    data: { labels: itemCatEntries.map(e => e[0]), datasets: [{ data: itemCatEntries.map(e => e[1]), backgroundColor: palette.slice(0, itemCatEntries.length), borderWidth: 0 }] },
+                    options: { ...chartDefaults, plugins: { legend: { position: 'right', labels: { color: '#ccc' } }, tooltip: { callbacks: { label: ctx => `$${ctx.parsed.toFixed(2)}` } } } }
+                }));
 
-                drawBarChart('chart-dow', dowNames, dowNames.map(d => byDow[d]), COLORS.green, '$');
+                // Day of week bar
+                chartInstances.push(new Chart(document.getElementById('chart-dow'), {
+                    type: 'bar',
+                    data: { labels: dowNames, datasets: [{ label: 'Spent', data: dowNames.map(d => byDow[d]), backgroundColor: '#4caf5088', borderColor: '#4caf50', borderWidth: 1, borderRadius: 4 }] },
+                    options: { ...chartDefaults, plugins: { legend: { display: false } }, scales: darkScales }
+                }));
 
+                // Top stores horizontal bar
                 const storeEntries = Object.entries(byStore).sort((a,b) => b[1] - a[1]).slice(0, 8);
-                drawHBarChart('chart-stores', storeEntries.map(e => e[0]), storeEntries.map(e => e[1]));
+                chartInstances.push(new Chart(document.getElementById('chart-stores'), {
+                    type: 'bar',
+                    data: { labels: storeEntries.map(e => e[0]), datasets: [{ label: 'Total', data: storeEntries.map(e => e[1]), backgroundColor: palette.slice(0, storeEntries.length), borderWidth: 0, borderRadius: 4 }] },
+                    options: { ...chartDefaults, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#ccc' }, grid: { display: false } } } }
+                }));
 
+                // Top items horizontal bar
                 const topItems = Object.values(byItem).sort((a,b) => b.total - a.total).slice(0, 8);
-                drawHBarChart('chart-items', topItems.map(i => i.name), topItems.map(i => i.total));
+                chartInstances.push(new Chart(document.getElementById('chart-items'), {
+                    type: 'bar',
+                    data: { labels: topItems.map(i => i.name), datasets: [{ label: 'Total', data: topItems.map(i => i.total), backgroundColor: palette.slice(0, topItems.length), borderWidth: 0, borderRadius: 4 }] },
+                    options: { ...chartDefaults, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#ccc' }, grid: { display: false } } } }
+                }));
+
+                // Cumulative line
+                if (cumulData.length > 0) {
+                    chartInstances.push(new Chart(document.getElementById('chart-cumulative'), {
+                        type: 'line',
+                        data: { labels: cumulData.map(d => d.x), datasets: [{ label: 'Cumulative', data: cumulData.map(d => d.y), borderColor: '#ff8c42', backgroundColor: '#ff8c4222', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#ff8c42' }] },
+                        options: { ...chartDefaults, plugins: { legend: { display: false } }, scales: darkScales }
+                    }));
+                }
             }, 50);
 
             // Tables below charts
@@ -544,162 +609,6 @@
             });
             html += '</tbody></table></div>';
             grid.innerHTML = html;
-        }
-
-        // --- CHART DRAWING UTILITIES ---
-        const COLORS = {
-            accent: '#6c9eff',
-            green: '#4caf50',
-            palette: ['#6c9eff','#ff6b6b','#ffd93d','#6bcb77','#a66cff','#ff8c42','#36d1dc','#f7797d','#c6ffdd','#e2b0ff']
-        };
-
-        function drawBarChart(canvasId, labels, values, color, prefix = '') {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = canvas.clientWidth * dpr;
-            canvas.height = canvas.clientHeight * dpr;
-            ctx.scale(dpr, dpr);
-            const W = canvas.clientWidth, H = canvas.clientHeight;
-            const pad = { top: 20, right: 20, bottom: 40, left: 50 };
-            const chartW = W - pad.left - pad.right;
-            const chartH = H - pad.top - pad.bottom;
-            const max = Math.max(...values, 1);
-
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(0, 0, W, H);
-
-            // Grid lines
-            ctx.strokeStyle = '#2a2a2a';
-            ctx.lineWidth = 1;
-            for (let i = 0; i <= 4; i++) {
-                const y = pad.top + chartH - (chartH * i / 4);
-                ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
-                ctx.fillStyle = '#888'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
-                ctx.fillText(prefix + (max * i / 4).toFixed(0), pad.left - 6, y + 4);
-            }
-
-            // Bars
-            const barW = Math.min(chartW / labels.length * 0.7, 40);
-            const gap = chartW / labels.length;
-            labels.forEach((label, i) => {
-                const x = pad.left + gap * i + gap / 2 - barW / 2;
-                const barH = (values[i] / max) * chartH;
-                const y = pad.top + chartH - barH;
-
-                // Gradient bar
-                const grad = ctx.createLinearGradient(x, y, x, pad.top + chartH);
-                grad.addColorStop(0, color);
-                grad.addColorStop(1, color + '44');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
-                ctx.fill();
-
-                // Label
-                ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
-                const displayLabel = label.length > 7 ? label.substring(5, 7) || label.substring(0, 7) : label;
-                ctx.fillText(displayLabel, pad.left + gap * i + gap / 2, H - pad.bottom + 16);
-
-                // Value on top
-                if (values[i] > 0) {
-                    ctx.fillStyle = '#e0e0e0'; ctx.font = '10px sans-serif';
-                    ctx.fillText(prefix + values[i].toFixed(0), pad.left + gap * i + gap / 2, y - 6);
-                }
-            });
-        }
-
-        function drawHBarChart(canvasId, labels, values) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = canvas.clientWidth * dpr;
-            canvas.height = canvas.clientHeight * dpr;
-            ctx.scale(dpr, dpr);
-            const W = canvas.clientWidth, H = canvas.clientHeight;
-            const pad = { top: 10, right: 60, bottom: 10, left: 120 };
-            const chartW = W - pad.left - pad.right;
-            const chartH = H - pad.top - pad.bottom;
-            const max = Math.max(...values, 1);
-            const barH = Math.min(chartH / labels.length * 0.7, 24);
-            const gap = chartH / labels.length;
-
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(0, 0, W, H);
-
-            labels.forEach((label, i) => {
-                const y = pad.top + gap * i + gap / 2 - barH / 2;
-                const barW = (values[i] / max) * chartW;
-
-                const grad = ctx.createLinearGradient(pad.left, y, pad.left + barW, y);
-                grad.addColorStop(0, COLORS.palette[i % COLORS.palette.length] + '44');
-                grad.addColorStop(1, COLORS.palette[i % COLORS.palette.length]);
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.roundRect(pad.left, y, barW, barH, [0, 4, 4, 0]);
-                ctx.fill();
-
-                // Label
-                ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
-                const truncLabel = label.length > 16 ? label.substring(0, 15) + '…' : label;
-                ctx.fillText(truncLabel, pad.left - 8, y + barH / 2 + 4);
-
-                // Value
-                ctx.fillStyle = '#e0e0e0'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
-                ctx.fillText('$' + values[i].toFixed(2), pad.left + barW + 6, y + barH / 2 + 4);
-            });
-        }
-
-        function drawDonut(canvasId, labels, values) {
-            const canvas = document.getElementById(canvasId);
-            if (!canvas) return;
-            const ctx = canvas.getContext('2d');
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = canvas.clientWidth * dpr;
-            canvas.height = canvas.clientHeight * dpr;
-            ctx.scale(dpr, dpr);
-            const W = canvas.clientWidth, H = canvas.clientHeight;
-
-            ctx.fillStyle = '#1a1a1a';
-            ctx.fillRect(0, 0, W, H);
-
-            const cx = W * 0.35, cy = H / 2;
-            const radius = Math.max(Math.min(cx - 20, cy - 20), 10);
-            const innerRadius = radius * 0.55;
-            const total = values.reduce((s, v) => s + v, 0);
-            let startAngle = -Math.PI / 2;
-
-            labels.forEach((label, i) => {
-                const slice = (values[i] / total) * Math.PI * 2;
-                ctx.beginPath();
-                ctx.arc(cx, cy, radius, startAngle, startAngle + slice);
-                ctx.arc(cx, cy, innerRadius, startAngle + slice, startAngle, true);
-                ctx.closePath();
-                ctx.fillStyle = COLORS.palette[i % COLORS.palette.length];
-                ctx.fill();
-                startAngle += slice;
-            });
-
-            // Center total
-            ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
-            ctx.fillText('$' + total.toFixed(0), cx, cy + 6);
-
-            // Legend
-            const legendX = W * 0.65;
-            let legendY = 20;
-            ctx.textAlign = 'left';
-            labels.forEach((label, i) => {
-                if (legendY > H - 10) return;
-                ctx.fillStyle = COLORS.palette[i % COLORS.palette.length];
-                ctx.fillRect(legendX, legendY, 10, 10);
-                ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
-                const pct = ((values[i] / total) * 100).toFixed(1);
-                const truncLabel = label.length > 12 ? label.substring(0, 11) + '…' : label;
-                ctx.fillText(`${truncLabel} (${pct}%)`, legendX + 16, legendY + 9);
-                legendY += 18;
-            });
         }
 
         function populateFilters() {
