@@ -181,6 +181,29 @@
             color: var(--muted);
         }
         .tab.active { border-bottom-color: var(--bg); color: var(--accent); }
+
+        /* Charts */
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .chart-card h3 {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-bottom: 12px;
+        }
+        .chart-card canvas {
+            width: 100%;
+            height: 220px;
+        }
     </style>
 </head>
 <body>
@@ -259,6 +282,7 @@
             </div>
 
             <div id="tab-analytics" style="display:none">
+                <div class="charts-grid" id="charts-grid"></div>
                 <div class="stats-grid" id="analytics-grid"></div>
             </div>
         </div>
@@ -412,22 +436,42 @@
         }
 
         function renderAnalytics() {
+            const chartsGrid = document.getElementById('charts-grid');
             const grid = document.getElementById('analytics-grid');
-            
-            // By category
+
+            // Data aggregation
             const byCat = {};
             allReceipts.forEach(r => {
                 const cat = r.category || 'uncategorized';
                 byCat[cat] = (byCat[cat] || 0) + (r.total || 0);
             });
-            
-            // By store
+
             const byStore = {};
             allReceipts.forEach(r => {
                 byStore[r.store_name] = (byStore[r.store_name] || 0) + (r.total || 0);
             });
 
-            // Top items
+            const byMonth = {};
+            allReceipts.forEach(r => {
+                const month = r.purchase_date ? r.purchase_date.substring(0, 7) : 'unknown';
+                byMonth[month] = (byMonth[month] || 0) + (r.total || 0);
+            });
+
+            const byItemCat = {};
+            allItems.forEach(i => {
+                const cat = i.category || 'other';
+                byItemCat[cat] = (byItemCat[cat] || 0) + (i.total_price || 0);
+            });
+
+            const byDow = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
+            const dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            allReceipts.forEach(r => {
+                if (r.purchase_date) {
+                    const d = new Date(r.purchase_date + 'T12:00:00');
+                    byDow[dowNames[d.getDay()]] += (r.total || 0);
+                }
+            });
+
             const byItem = {};
             allItems.forEach(i => {
                 const name = i.item_name.toLowerCase();
@@ -436,25 +480,217 @@
                 byItem[name].total += i.total_price || 0;
             });
 
-            let html = '<h2>By Category</h2><div class="table-wrapper"><table><thead><tr><th>Category</th><th class="amount">Spent</th></tr></thead><tbody>';
-            Object.entries(byCat).sort((a, b) => b[1] - a[1]).forEach(([cat, total]) => {
-                html += `<tr><td>${cat}</td><td class="amount">$${total.toFixed(2)}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
+            // Build charts HTML
+            chartsGrid.innerHTML = `
+                <div class="chart-card">
+                    <h3>Monthly Spending</h3>
+                    <canvas id="chart-monthly" width="500" height="250"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Spending by Category</h3>
+                    <canvas id="chart-category" width="500" height="250"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Item Category Breakdown</h3>
+                    <canvas id="chart-item-cat" width="500" height="250"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Spending by Day of Week</h3>
+                    <canvas id="chart-dow" width="500" height="250"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Top Stores</h3>
+                    <canvas id="chart-stores" width="500" height="250"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Top Items by Spend</h3>
+                    <canvas id="chart-items" width="500" height="250"></canvas>
+                </div>
+            `;
 
-            html += '<h2>By Store</h2><div class="table-wrapper"><table><thead><tr><th>Store</th><th class="amount">Spent</th></tr></thead><tbody>';
-            Object.entries(byStore).sort((a, b) => b[1] - a[1]).forEach(([store, total]) => {
-                html += `<tr><td>${store}</td><td class="amount">$${total.toFixed(2)}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
+            // Draw charts after DOM update
+            setTimeout(() => {
+                const months = Object.keys(byMonth).sort();
+                drawBarChart('chart-monthly', months, months.map(m => byMonth[m]), COLORS.accent, '$');
 
-            html += '<h2>Top Items</h2><div class="table-wrapper"><table><thead><tr><th>Item</th><th>Times Bought</th><th class="amount">Total Spent</th></tr></thead><tbody>';
+                const catEntries = Object.entries(byCat).sort((a,b) => b[1] - a[1]);
+                drawDonut('chart-category', catEntries.map(e => e[0]), catEntries.map(e => e[1]));
+
+                const itemCatEntries = Object.entries(byItemCat).sort((a,b) => b[1] - a[1]);
+                drawDonut('chart-item-cat', itemCatEntries.map(e => e[0]), itemCatEntries.map(e => e[1]));
+
+                drawBarChart('chart-dow', dowNames, dowNames.map(d => byDow[d]), COLORS.green, '$');
+
+                const storeEntries = Object.entries(byStore).sort((a,b) => b[1] - a[1]).slice(0, 8);
+                drawHBarChart('chart-stores', storeEntries.map(e => e[0]), storeEntries.map(e => e[1]));
+
+                const topItems = Object.values(byItem).sort((a,b) => b.total - a.total).slice(0, 8);
+                drawHBarChart('chart-items', topItems.map(i => i.name), topItems.map(i => i.total));
+            }, 50);
+
+            // Tables below charts
+            let html = '<h2>Top Items by Frequency</h2><div class="table-wrapper"><table><thead><tr><th>Item</th><th>Times Bought</th><th class="amount">Total Spent</th><th class="amount">Avg Price</th></tr></thead><tbody>';
             Object.values(byItem).sort((a, b) => b.count - a.count).slice(0, 15).forEach(item => {
-                html += `<tr><td>${item.name}</td><td>${item.count}</td><td class="amount">$${item.total.toFixed(2)}</td></tr>`;
+                html += `<tr><td>${item.name}</td><td>${item.count}</td><td class="amount">$${item.total.toFixed(2)}</td><td class="amount">$${(item.total / item.count).toFixed(2)}</td></tr>`;
             });
             html += '</tbody></table></div>';
-
             grid.innerHTML = html;
+        }
+
+        // --- CHART DRAWING UTILITIES ---
+        const COLORS = {
+            accent: '#6c9eff',
+            green: '#4caf50',
+            palette: ['#6c9eff','#ff6b6b','#ffd93d','#6bcb77','#a66cff','#ff8c42','#36d1dc','#f7797d','#c6ffdd','#e2b0ff']
+        };
+
+        function drawBarChart(canvasId, labels, values, color, prefix = '') {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.clientWidth * dpr;
+            canvas.height = canvas.clientHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const W = canvas.clientWidth, H = canvas.clientHeight;
+            const pad = { top: 20, right: 20, bottom: 40, left: 50 };
+            const chartW = W - pad.left - pad.right;
+            const chartH = H - pad.top - pad.bottom;
+            const max = Math.max(...values, 1);
+
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, W, H);
+
+            // Grid lines
+            ctx.strokeStyle = '#2a2a2a';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const y = pad.top + chartH - (chartH * i / 4);
+                ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(W - pad.right, y); ctx.stroke();
+                ctx.fillStyle = '#888'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+                ctx.fillText(prefix + (max * i / 4).toFixed(0), pad.left - 6, y + 4);
+            }
+
+            // Bars
+            const barW = Math.min(chartW / labels.length * 0.7, 40);
+            const gap = chartW / labels.length;
+            labels.forEach((label, i) => {
+                const x = pad.left + gap * i + gap / 2 - barW / 2;
+                const barH = (values[i] / max) * chartH;
+                const y = pad.top + chartH - barH;
+
+                // Gradient bar
+                const grad = ctx.createLinearGradient(x, y, x, pad.top + chartH);
+                grad.addColorStop(0, color);
+                grad.addColorStop(1, color + '44');
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.roundRect(x, y, barW, barH, [4, 4, 0, 0]);
+                ctx.fill();
+
+                // Label
+                ctx.fillStyle = '#888'; ctx.font = '10px sans-serif'; ctx.textAlign = 'center';
+                const displayLabel = label.length > 7 ? label.substring(5, 7) || label.substring(0, 7) : label;
+                ctx.fillText(displayLabel, pad.left + gap * i + gap / 2, H - pad.bottom + 16);
+
+                // Value on top
+                if (values[i] > 0) {
+                    ctx.fillStyle = '#e0e0e0'; ctx.font = '10px sans-serif';
+                    ctx.fillText(prefix + values[i].toFixed(0), pad.left + gap * i + gap / 2, y - 6);
+                }
+            });
+        }
+
+        function drawHBarChart(canvasId, labels, values) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.clientWidth * dpr;
+            canvas.height = canvas.clientHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const W = canvas.clientWidth, H = canvas.clientHeight;
+            const pad = { top: 10, right: 60, bottom: 10, left: 120 };
+            const chartW = W - pad.left - pad.right;
+            const chartH = H - pad.top - pad.bottom;
+            const max = Math.max(...values, 1);
+            const barH = Math.min(chartH / labels.length * 0.7, 24);
+            const gap = chartH / labels.length;
+
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, W, H);
+
+            labels.forEach((label, i) => {
+                const y = pad.top + gap * i + gap / 2 - barH / 2;
+                const barW = (values[i] / max) * chartW;
+
+                const grad = ctx.createLinearGradient(pad.left, y, pad.left + barW, y);
+                grad.addColorStop(0, COLORS.palette[i % COLORS.palette.length] + '44');
+                grad.addColorStop(1, COLORS.palette[i % COLORS.palette.length]);
+                ctx.fillStyle = grad;
+                ctx.beginPath();
+                ctx.roundRect(pad.left, y, barW, barH, [0, 4, 4, 0]);
+                ctx.fill();
+
+                // Label
+                ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif'; ctx.textAlign = 'right';
+                const truncLabel = label.length > 16 ? label.substring(0, 15) + '…' : label;
+                ctx.fillText(truncLabel, pad.left - 8, y + barH / 2 + 4);
+
+                // Value
+                ctx.fillStyle = '#e0e0e0'; ctx.font = '11px sans-serif'; ctx.textAlign = 'left';
+                ctx.fillText('$' + values[i].toFixed(2), pad.left + barW + 6, y + barH / 2 + 4);
+            });
+        }
+
+        function drawDonut(canvasId, labels, values) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = canvas.clientWidth * dpr;
+            canvas.height = canvas.clientHeight * dpr;
+            ctx.scale(dpr, dpr);
+            const W = canvas.clientWidth, H = canvas.clientHeight;
+
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fillRect(0, 0, W, H);
+
+            const cx = W * 0.35, cy = H / 2;
+            const radius = Math.min(cx - 20, cy - 20);
+            const innerRadius = radius * 0.55;
+            const total = values.reduce((s, v) => s + v, 0);
+            let startAngle = -Math.PI / 2;
+
+            labels.forEach((label, i) => {
+                const slice = (values[i] / total) * Math.PI * 2;
+                ctx.beginPath();
+                ctx.arc(cx, cy, radius, startAngle, startAngle + slice);
+                ctx.arc(cx, cy, innerRadius, startAngle + slice, startAngle, true);
+                ctx.closePath();
+                ctx.fillStyle = COLORS.palette[i % COLORS.palette.length];
+                ctx.fill();
+                startAngle += slice;
+            });
+
+            // Center total
+            ctx.fillStyle = '#e0e0e0'; ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center';
+            ctx.fillText('$' + total.toFixed(0), cx, cy + 6);
+
+            // Legend
+            const legendX = W * 0.65;
+            let legendY = 20;
+            ctx.textAlign = 'left';
+            labels.forEach((label, i) => {
+                if (legendY > H - 10) return;
+                ctx.fillStyle = COLORS.palette[i % COLORS.palette.length];
+                ctx.fillRect(legendX, legendY, 10, 10);
+                ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
+                const pct = ((values[i] / total) * 100).toFixed(1);
+                const truncLabel = label.length > 12 ? label.substring(0, 11) + '…' : label;
+                ctx.fillText(`${truncLabel} (${pct}%)`, legendX + 16, legendY + 9);
+                legendY += 18;
+            });
         }
 
         function populateFilters() {
