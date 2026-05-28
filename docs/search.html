@@ -144,13 +144,13 @@ h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
 <script>
 const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/vault.enc';
-const KEY_STORAGE = 'vt_key';
+const KEY_STORAGE = 'vault_key';
 
 let db = null;
 
 // Auto-unlock if key stored
 window.addEventListener('DOMContentLoaded', () => {
-  const saved = sessionStorage.getItem(KEY_STORAGE);
+  const saved = localStorage.getItem(KEY_STORAGE);
   if (saved) {
     document.getElementById('passphrase').value = saved;
     unlock(true);
@@ -181,6 +181,7 @@ async function unlock(isAuto = false) {
     db = new SQL.Database(decrypted);
 
     sessionStorage.setItem(KEY_STORAGE, passphrase);
+    localStorage.setItem(KEY_STORAGE, passphrase);
     document.getElementById('unlock-screen').style.display = 'none';
     document.getElementById('main').style.display = 'block';
     loadStats();
