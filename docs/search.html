@@ -99,6 +99,8 @@ h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; 
 .tl-price.zero { color: var(--text-muted); }
 
 .also-known { font-size: 0.72rem; color: var(--text-muted); padding: 0 1rem 0.4rem; font-style: italic; }
+.price-chart-container { padding: 0.4rem 1rem 0.6rem; border-top: 1px solid var(--border); }
+.price-chart-container canvas { max-height: 120px; width: 100% !important; }
 .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); }
 .empty-state .big { font-size: 2.2rem; margin-bottom: 0.4rem; }
 
@@ -142,6 +144,7 @@ h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; 
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
 const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/vault.enc';
 const KEY_STORAGE = 'vault_key';
@@ -335,6 +338,7 @@ function doSearch() {
 
   resultsInfo.textContent = `${groups.length} item${groups.length !== 1 ? 's' : ''} found`;
   resultsDiv.innerHTML = groups.map(renderGroup).join('');
+  renderPriceCharts();
 }
 
 function renderGroup(g) {
@@ -379,8 +383,57 @@ function renderGroup(g) {
       <span class="tl-price ${priceClass}">${priceStr}${qty}</span>
     </div>`;
   });
+  // Price chart for items with multiple purchases
+  const purchaseTxns = g.transactions.filter(t => t.type === 'purchase' && (t.unit_price || t.total_price) > 0).reverse();
+  if (purchaseTxns.length >= 2) {
+    const chartLabels = JSON.stringify(purchaseTxns.map(t => t.purchase_date));
+    const chartPrices = JSON.stringify(purchaseTxns.map(t => Math.abs(t.unit_price || t.total_price)));
+    html += `<div class="price-chart-container"><canvas class="price-chart-canvas" height="100" data-labels='${chartLabels}' data-prices='${chartPrices}'></canvas></div>`;
+  }
+
   html += `</div></div>`;
   return html;
+}
+
+let chartInstances = [];
+
+function renderPriceCharts() {
+  // Destroy old charts
+  chartInstances.forEach(c => c.destroy());
+  chartInstances = [];
+
+  document.querySelectorAll('.price-chart-canvas').forEach(canvas => {
+    const labels = JSON.parse(canvas.dataset.labels);
+    const prices = JSON.parse(canvas.dataset.prices);
+    if (labels.length < 2) { canvas.parentElement.style.display = 'none'; return; }
+
+    const ctx = canvas.getContext('2d');
+    const chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: prices,
+          borderColor: '#4a9eff',
+          backgroundColor: 'rgba(74,158,255,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 3,
+          pointBackgroundColor: '#4a9eff',
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => `$${ctx.raw.toFixed(2)}` } } },
+        scales: {
+          x: { ticks: { color: '#888', font: { size: 10 } }, grid: { display: false } },
+          y: { ticks: { color: '#888', font: { size: 10 }, callback: v => '$' + v }, grid: { color: '#2a2a2a' } }
+        }
+      }
+    });
+    chartInstances.push(chart);
+  });
 }
 
 function esc(s) {

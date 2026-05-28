@@ -64,9 +64,55 @@
 
         /* Dashboard */
         #dashboard { display: none; }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+        .header h1 { margin-bottom: 0; }
+        .header a {
+            color: var(--accent);
+            font-size: 0.85rem;
+            text-decoration: none;
+            margin-left: auto;
+        }
+        .header a:hover { text-decoration: underline; }
+
+        /* Month filter bar */
+        .month-bar {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .month-btn {
+            padding: 6px 12px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--muted);
+            cursor: pointer;
+            font-size: 0.8rem;
+            font-weight: 500;
+            transition: all 0.15s;
+        }
+        .month-btn:hover { border-color: var(--accent); color: var(--text); }
+        .month-btn.active {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+            font-weight: 700;
+        }
+
+        /* Stats bar */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 12px;
             margin-bottom: 24px;
         }
@@ -76,37 +122,29 @@
             border-radius: 8px;
             padding: 16px;
         }
-        .stat-card .value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
-        .stat-card .label { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
+        .stat-card .value { font-size: 1.6rem; font-weight: 700; color: var(--accent); }
+        .stat-card .value.red { color: var(--red); }
+        .stat-card .label { font-size: 0.75rem; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* Filters */
-        .filters {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
-        .filters input, .filters select {
-            padding: 8px 12px;
+        /* Tabs */
+        .tabs { display: flex; gap: 4px; margin-bottom: 20px; }
+        .tab {
+            padding: 10px 20px;
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text);
-            font-size: 0.9rem;
-        }
-        .filters button {
-            padding: 8px 16px;
-            background: var(--accent);
-            color: #000;
-            border: none;
-            border-radius: 6px;
+            border-bottom: none;
+            border-radius: 8px 8px 0 0;
             cursor: pointer;
-            font-weight: 600;
+            color: var(--muted);
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: all 0.15s;
         }
+        .tab:hover { color: var(--text); }
+        .tab.active { color: var(--accent); background: var(--bg); border-bottom: 2px solid var(--bg); }
 
         /* Table */
-        .table-wrapper { overflow-x: auto; margin-bottom: 24px; }
+        .table-wrapper { overflow-x: auto; }
         table {
             width: 100%;
             border-collapse: collapse;
@@ -120,101 +158,111 @@
         th { color: var(--muted); font-weight: 600; white-space: nowrap; }
         tr:hover { background: var(--surface); }
         .amount { font-family: 'SF Mono', 'Fira Code', monospace; text-align: right; }
-        .category-badge {
-            display: inline-block;
-            padding: 2px 8px;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            background: var(--border);
-        }
+        .clickable-row { cursor: pointer; }
+        .clickable-row:hover { background: #222; }
 
-        /* Detail modal */
-        .modal-overlay {
+        /* Receipt detail (expandable) */
+        .receipt-detail {
             display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.8);
-            z-index: 100;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-overlay.active { display: flex; }
-        .modal {
             background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 24px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
+            border-bottom: 1px solid var(--border);
         }
-        .modal h3 { margin-bottom: 12px; }
-        .modal .close { float: right; cursor: pointer; color: var(--muted); font-size: 1.2rem; }
-        .item-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid var(--border); }
-
-        /* Export buttons */
-        .export-bar {
+        .receipt-detail.open { display: table-row; }
+        .receipt-detail td {
+            padding: 16px 24px;
+        }
+        .item-list { list-style: none; }
+        .item-list li {
             display: flex;
-            gap: 8px;
-            margin-bottom: 16px;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.83rem;
         }
-        .export-bar button {
-            padding: 6px 14px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text);
-            cursor: pointer;
-            font-size: 0.85rem;
-        }
-        .export-bar button:hover { border-color: var(--accent); }
-
-        /* Tabs */
-        .tabs { display: flex; gap: 4px; margin-bottom: 16px; }
-        .tab {
-            padding: 8px 16px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 6px 6px 0 0;
-            cursor: pointer;
-            color: var(--muted);
-        }
-        .tab.active { border-bottom-color: var(--bg); color: var(--accent); }
+        .item-list li:last-child { border-bottom: none; }
+        .item-list .item-name { color: var(--text); }
+        .item-list .item-price { color: var(--muted); font-family: 'SF Mono', monospace; }
+        .item-list .discount { color: var(--green); }
+        .item-list .return-item { color: var(--red); }
 
         /* Charts */
         .charts-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-            gap: 16px;
+            grid-template-columns: 1fr;
+            gap: 20px;
             margin-bottom: 24px;
         }
         .chart-card {
             background: var(--surface);
             border: 1px solid var(--border);
             border-radius: 8px;
-            padding: 16px;
+            padding: 20px;
         }
         .chart-card h3 {
             font-size: 0.9rem;
             color: var(--muted);
             margin-bottom: 12px;
         }
-        .chart-card canvas {
-            width: 100% !important;
-            height: 100% !important;
-        }
-        .chart-card .chart-container {
+        .chart-container {
             position: relative;
-            height: 220px;
             width: 100%;
+            height: 300px;
         }
-        .chart-card-wide {
-            grid-column: 1 / -1;
+        .chart-container-small {
+            height: 250px;
         }
-        .chart-card-wide .chart-container {
-            height: 180px;
+        .charts-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
+        @media (max-width: 768px) {
+            .charts-row { grid-template-columns: 1fr; }
+            .chart-container { height: 250px; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .month-bar { gap: 4px; }
+            .month-btn { padding: 5px 8px; font-size: 0.72rem; }
+        }
+
+        /* Store breakdown */
+        .store-breakdown {
+            margin-top: 16px;
+        }
+        .store-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .store-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 18px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .store-header:hover { background: #222; }
+        .store-header .store-name { font-weight: 600; font-size: 0.95rem; }
+        .store-header .store-total { color: var(--accent); font-family: 'SF Mono', monospace; font-weight: 700; }
+        .store-header .arrow { color: var(--muted); transition: transform 0.2s; }
+        .store-header.expanded .arrow { transform: rotate(90deg); }
+        .store-categories {
+            display: none;
+            padding: 0 18px 14px;
+        }
+        .store-categories.open { display: block; }
+        .store-cat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            font-size: 0.83rem;
+            border-bottom: 1px solid var(--border);
+        }
+        .store-cat-row:last-child { border-bottom: none; }
+        .store-cat-name { color: var(--text); }
+        .store-cat-amount { color: var(--muted); font-family: 'SF Mono', monospace; }
     </style>
 </head>
 <body>
@@ -230,94 +278,69 @@
 
         <!-- Dashboard -->
         <div id="dashboard">
-            <div style="display:flex; align-items:center; gap: 1rem; margin-bottom: 12px;">
+            <div class="header">
                 <h1>📊 Receipt Vault</h1>
-                <a href="search.html" style="color: var(--accent); font-size: 0.85rem; text-decoration: none; margin-left: auto;">🔍 Search →</a>
+                <a href="search.html">🔍 Search →</a>
             </div>
 
+            <div class="month-bar" id="month-bar"></div>
             <div class="stats-grid" id="stats-grid"></div>
 
             <div class="tabs">
-                <div class="tab active" onclick="showTab('receipts')">Receipts</div>
-                <div class="tab" onclick="showTab('items')">Items</div>
-                <div class="tab" onclick="showTab('analytics')">Analytics</div>
+                <div class="tab active" data-tab="analytics" onclick="showTab('analytics')">Analytics</div>
+                <div class="tab" data-tab="receipts" onclick="showTab('receipts')">Receipts</div>
             </div>
 
-            <div id="tab-receipts">
-                <div class="filters">
-                    <input type="date" id="filter-from" placeholder="From">
-                    <input type="date" id="filter-to" placeholder="To">
-                    <input type="text" id="filter-store" placeholder="Store...">
-                    <select id="filter-category"><option value="">All categories</option></select>
-                    <button onclick="applyFilters()">Filter</button>
+            <div id="tab-analytics">
+                <div class="charts-grid">
+                    <div class="chart-card">
+                        <h3>Monthly Spending by Category</h3>
+                        <div class="chart-container" id="monthly-chart-container"><canvas id="chart-monthly-stacked"></canvas></div>
+                    </div>
+                    <div class="charts-row">
+                        <div class="chart-card">
+                            <h3>Store Breakdown</h3>
+                            <div class="chart-container chart-container-small"><canvas id="chart-store-pie"></canvas></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>Category Spending</h3>
+                            <div class="chart-container chart-container-small" id="store-breakdown-container"></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="export-bar">
-                    <button onclick="exportCSV()">📥 Export CSV</button>
-                    <button onclick="exportJSON()">📥 Export JSON</button>
-                </div>
+                <div class="store-breakdown" id="store-breakdown"></div>
+            </div>
+
+            <div id="tab-receipts" style="display:none">
                 <div class="table-wrapper">
                     <table id="receipts-table">
                         <thead>
                             <tr>
                                 <th>Date</th>
                                 <th>Store</th>
-                                <th>Category</th>
                                 <th>Items</th>
                                 <th class="amount">Total</th>
-                                <th>Payment</th>
                             </tr>
                         </thead>
-                        <tbody></tbody>
+                        <tbody id="receipts-tbody"></tbody>
                     </table>
                 </div>
-            </div>
-
-            <div id="tab-items" style="display:none">
-                <div class="filters">
-                    <input type="text" id="filter-item" placeholder="Search items...">
-                    <button onclick="filterItems()">Search</button>
-                </div>
-                <div class="table-wrapper">
-                    <table id="items-table">
-                        <thead>
-                            <tr>
-                                <th>Item</th>
-                                <th>Category</th>
-                                <th class="amount">Unit Price</th>
-                                <th>Qty</th>
-                                <th class="amount">Total</th>
-                                <th>Store</th>
-                                <th>Date</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
-            </div>
-
-            <div id="tab-analytics" style="display:none">
-                <div class="charts-grid" id="charts-grid"></div>
-                <div class="stats-grid" id="analytics-grid"></div>
             </div>
         </div>
     </div>
 
-    <!-- Detail Modal -->
-    <div class="modal-overlay" id="modal" onclick="closeModal(event)">
-        <div class="modal" id="modal-content"></div>
-    </div>
-
-    <!-- Chart.js for rich visualizations -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
-    <!-- sql.js for reading SQLite in browser -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
     <script>
         let db = null;
         let allReceipts = [];
         let allItems = [];
+        let itemCatalog = {};
+        let currentFilter = null; // null = current/most recent month, 'all' = all time, 'YYYY-MM' = specific month
 
         const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/vault.enc';
 
+        // ========== DECRYPT / UNLOCK (UNCHANGED) ==========
         async function unlock(isAuto = false) {
             const passphrase = document.getElementById('passphrase').value;
             const status = document.getElementById('unlock-status');
@@ -326,23 +349,18 @@
             status.textContent = 'Fetching vault...';
 
             try {
-                // Fetch encrypted file
                 const resp = await fetch(VAULT_URL);
                 if (!resp.ok) throw new Error('Failed to fetch vault file');
                 const encData = await resp.arrayBuffer();
                 status.textContent = 'Decrypting...';
 
-                // Decrypt (OpenSSL format: Salted__<8 bytes salt><ciphertext>)
                 const decrypted = await decryptOpenSSL(new Uint8Array(encData), passphrase);
                 status.textContent = 'Loading database...';
 
-                // Load SQLite
                 const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
                 db = new SQL.Database(decrypted);
 
-                // Load data
                 loadData();
-                // Save key on successful decrypt
                 saveKey(passphrase);
                 document.getElementById('unlock-screen').style.display = 'none';
                 document.getElementById('dashboard').style.display = 'block';
@@ -363,20 +381,18 @@
         }
 
         async function decryptOpenSSL(data, passphrase) {
-            // OpenSSL enc format: "Salted__" + 8-byte salt + ciphertext
             const header = new TextDecoder().decode(data.slice(0, 8));
             if (header !== 'Salted__') throw new Error('Invalid encrypted file format');
 
             const salt = data.slice(8, 16);
             const ciphertext = data.slice(16);
 
-            // Derive key+IV using PBKDF2 (matching openssl -pbkdf2 -iter 100000)
             const enc = new TextEncoder();
             const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveBits']);
             const bits = await crypto.subtle.deriveBits(
                 { name: 'PBKDF2', salt: salt, iterations: 100000, hash: 'SHA-256' },
                 keyMaterial,
-                384 // 256 bits key + 128 bits IV
+                384
             );
 
             const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), { name: 'AES-CBC' }, false, ['decrypt']);
@@ -386,8 +402,22 @@
             return new Uint8Array(decrypted);
         }
 
+        function saveKey(key) { localStorage.setItem('vault_key', key); }
+        function loadKey() { return localStorage.getItem('vault_key'); }
+        function clearKey() { localStorage.removeItem('vault_key'); }
+
+        let autoRetryCount = 0;
+        window.addEventListener('DOMContentLoaded', () => {
+            const saved = loadKey();
+            if (saved) {
+                document.getElementById('passphrase').value = saved;
+                unlock(true);
+            }
+        });
+        document.getElementById('passphrase').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+
+        // ========== DATA LOADING ==========
         function loadData() {
-            // Load receipts
             const receipts = db.exec("SELECT * FROM receipts ORDER BY purchase_date DESC, purchase_time DESC");
             if (receipts.length > 0) {
                 const cols = receipts[0].columns;
@@ -398,10 +428,9 @@
                 });
             }
 
-            // Load items with receipt info
             const items = db.exec(`
-                SELECT li.*, r.store_name, r.purchase_date 
-                FROM line_items li JOIN receipts r ON li.receipt_id = r.id 
+                SELECT li.*, r.store_name, r.purchase_date, r.store_location
+                FROM line_items li JOIN receipts r ON li.receipt_id = r.id
                 ORDER BY r.purchase_date DESC
             `);
             if (items.length > 0) {
@@ -413,317 +442,435 @@
                 });
             }
 
+            // Load item catalog for enriched names
+            try {
+                const catalog = db.exec("SELECT item_number, display_name FROM item_catalog");
+                if (catalog.length > 0) {
+                    catalog[0].values.forEach(row => {
+                        itemCatalog[row[0]] = row[1];
+                    });
+                }
+            } catch(e) { /* table might not exist */ }
+
+            buildMonthBar();
+            applyFilter();
+        }
+
+        // ========== MONTH FILTER ==========
+        function getAvailableMonths() {
+            const months = new Set();
+            allReceipts.forEach(r => {
+                if (r.purchase_date) months.add(r.purchase_date.substring(0, 7));
+            });
+            return [...months].sort().reverse();
+        }
+
+        function buildMonthBar() {
+            const bar = document.getElementById('month-bar');
+            const months = getAvailableMonths();
+            
+            // Determine default: current month if it has data, otherwise most recent
+            const now = new Date();
+            const currentMonth = now.toISOString().substring(0, 7);
+            const defaultMonth = months.includes(currentMonth) ? currentMonth : months[0];
+            currentFilter = defaultMonth;
+
+            let html = `<button class="month-btn" data-month="all" onclick="setFilter('all')">All Time</button>`;
+            months.forEach(m => {
+                const [y, mo] = m.split('-');
+                const label = new Date(y, parseInt(mo) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+                const active = m === defaultMonth ? ' active' : '';
+                html += `<button class="month-btn${active}" data-month="${m}" onclick="setFilter('${m}')">${label}</button>`;
+            });
+            bar.innerHTML = html;
+        }
+
+        function setFilter(month) {
+            currentFilter = month;
+            document.querySelectorAll('.month-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.month === month);
+            });
+            applyFilter();
+        }
+
+        function getFilteredReceipts() {
+            if (currentFilter === 'all') return allReceipts;
+            return allReceipts.filter(r => r.purchase_date && r.purchase_date.startsWith(currentFilter));
+        }
+
+        function getFilteredItems() {
+            if (currentFilter === 'all') return allItems;
+            return allItems.filter(i => i.purchase_date && i.purchase_date.startsWith(currentFilter));
+        }
+
+        function applyFilter() {
             renderStats();
-            renderReceipts(allReceipts);
-            renderItems(allItems);
-            populateFilters();
+            renderReceipts();
             renderAnalytics();
         }
 
+        // ========== DEPARTMENT → CATEGORY MAPPING ==========
+        const DEPT_MAP = {
+            '61': 'Produce/Meat/Fish', '65': 'Produce/Meat/Fish',
+            '17': 'Dairy/Deli', '19': 'Dairy/Deli',
+            '13': 'Grocery/Snacks', '7': 'Grocery/Snacks',
+            '27': 'Household', '34': 'Household',
+            '32': 'Electronics',
+            '39': 'Clothing'
+        };
+
+        const CATEGORY_COLORS = {
+            'Produce/Meat/Fish': '#4caf50',
+            'Dairy/Deli': '#ffd93d',
+            'Grocery/Snacks': '#ff9800',
+            'Household': '#6c9eff',
+            'Electronics': '#a66cff',
+            'Clothing': '#ff6b9d',
+            'Gas': '#36d1dc',
+            'Dining': '#f7797d',
+            'Grocery': '#66bb6a',
+            'Other': '#888888'
+        };
+
+        function getItemCategory(item) {
+            // Check if it's a coupon/discount
+            if (item.item_name && (item.item_name.startsWith('/') || item.item_name.startsWith('CPN'))) return 'Discount';
+            // Check line_items category field
+            if (item.category) {
+                const cat = item.category.toLowerCase();
+                if (cat.includes('grocery') || cat.includes('food')) return 'Grocery/Snacks';
+                if (cat.includes('produce') || cat.includes('meat') || cat.includes('fish')) return 'Produce/Meat/Fish';
+                if (cat.includes('dairy') || cat.includes('deli')) return 'Dairy/Deli';
+                if (cat.includes('household') || cat.includes('home')) return 'Household';
+                if (cat.includes('electronic')) return 'Electronics';
+                if (cat.includes('cloth') || cat.includes('apparel')) return 'Clothing';
+                if (cat.includes('gas') || cat.includes('fuel')) return 'Gas';
+                if (cat.includes('dining') || cat.includes('restaurant')) return 'Dining';
+                return item.category;
+            }
+            // Use department mapping
+            if (item.department) {
+                const dept = String(item.department).trim();
+                if (DEPT_MAP[dept]) return DEPT_MAP[dept];
+            }
+            return 'Other';
+        }
+
+        function isReturn(receipt) {
+            return (receipt.notes && receipt.notes.toLowerCase().includes('return')) || (receipt.total && receipt.total < 0);
+        }
+
+        function isCouponItem(item) {
+            return item.item_name && (item.item_name.startsWith('/') || item.item_name.startsWith('CPN'));
+        }
+
+        function isReturnItem(item) {
+            return item.total_price && item.total_price < 0 && !isCouponItem(item);
+        }
+
+        // ========== STATS BAR ==========
         function renderStats() {
-            const total = allReceipts.reduce((s, r) => s + (r.total || 0), 0);
+            const receipts = getFilteredReceipts();
+            const nonReturns = receipts.filter(r => !isReturn(r));
+            const returns = receipts.filter(r => isReturn(r));
+
+            const totalSpent = nonReturns.reduce((s, r) => s + (r.total || 0), 0);
+            const totalReturned = Math.abs(returns.reduce((s, r) => s + (r.total || 0), 0));
+            const trips = nonReturns.length;
+            const avgPerTrip = trips > 0 ? totalSpent / trips : 0;
+
             const grid = document.getElementById('stats-grid');
             grid.innerHTML = `
-                <div class="stat-card"><div class="value">${allReceipts.length}</div><div class="label">Total Receipts</div></div>
-                <div class="stat-card"><div class="value">$${total.toFixed(2)}</div><div class="label">Total Spent</div></div>
-                <div class="stat-card"><div class="value">$${allReceipts.length ? (total / allReceipts.length).toFixed(2) : '0.00'}</div><div class="label">Avg per Receipt</div></div>
-                <div class="stat-card"><div class="value">${allItems.length}</div><div class="label">Total Items Tracked</div></div>
+                <div class="stat-card"><div class="value">$${totalSpent.toFixed(0)}</div><div class="label">Total Spent</div></div>
+                <div class="stat-card"><div class="value">${trips}</div><div class="label">Trips</div></div>
+                <div class="stat-card"><div class="value">$${avgPerTrip.toFixed(0)}</div><div class="label">Avg / Trip</div></div>
+                <div class="stat-card"><div class="value red">$${totalReturned.toFixed(0)}</div><div class="label">Returned</div></div>
             `;
         }
 
-        function renderReceipts(receipts) {
-            const tbody = document.querySelector('#receipts-table tbody');
-            tbody.innerHTML = receipts.map(r => `
-                <tr onclick="showReceipt(${r.id})" style="cursor:pointer">
-                    <td>${r.purchase_date || ''}${r.purchase_time ? ' ' + r.purchase_time : ''}</td>
-                    <td>${r.store_name || ''}</td>
-                    <td><span class="category-badge">${r.category || '-'}</span></td>
-                    <td>${allItems.filter(i => i.receipt_id === r.id).length}</td>
-                    <td class="amount">$${(r.total || 0).toFixed(2)}</td>
-                    <td>${r.payment_method || ''}${r.card_last4 ? ' •' + r.card_last4 : ''}</td>
-                </tr>
-            `).join('');
+        // ========== RECEIPTS TAB ==========
+        function renderReceipts() {
+            const receipts = getFilteredReceipts();
+            const tbody = document.getElementById('receipts-tbody');
+            
+            let html = '';
+            receipts.forEach(r => {
+                const items = allItems.filter(i => i.receipt_id === r.id);
+                const isRet = isReturn(r);
+                const totalClass = isRet ? 'amount" style="color:var(--red)' : 'amount';
+                html += `<tr class="clickable-row" onclick="toggleReceipt(this, ${r.id})">
+                    <td>${formatDate(r.purchase_date)}</td>
+                    <td>${r.store_name || ''}${isRet ? ' <span style="color:var(--red);font-size:0.75rem;">RETURN</span>' : ''}</td>
+                    <td>${items.length}</td>
+                    <td class="${totalClass}">$${(r.total || 0).toFixed(2)}</td>
+                </tr>`;
+                html += `<tr class="receipt-detail" id="detail-${r.id}"><td colspan="4">${renderReceiptDetail(r, items)}</td></tr>`;
+            });
+            tbody.innerHTML = html;
         }
 
-        function renderItems(items) {
-            const tbody = document.querySelector('#items-table tbody');
-            tbody.innerHTML = items.map(i => `
-                <tr>
-                    <td>${i.item_name}</td>
-                    <td><span class="category-badge">${i.category || '-'}</span></td>
-                    <td class="amount">${i.unit_price ? '$' + i.unit_price.toFixed(2) : '-'}</td>
-                    <td>${i.quantity || 1}${i.unit ? ' ' + i.unit : ''}</td>
-                    <td class="amount">$${(i.total_price || 0).toFixed(2)}</td>
-                    <td>${i.store_name || ''}</td>
-                    <td>${i.purchase_date || ''}</td>
-                </tr>
-            `).join('');
+        function renderReceiptDetail(receipt, items) {
+            let html = `<div style="margin-bottom:8px;color:var(--muted);font-size:0.8rem;">${receipt.store_location || ''} ${receipt.purchase_time ? '• ' + receipt.purchase_time : ''} • ${receipt.payment_method || ''}${receipt.card_last4 ? ' ••' + receipt.card_last4 : ''}</div>`;
+            html += '<ul class="item-list">';
+            items.forEach(item => {
+                const name = getDisplayName(item);
+                const price = (item.total_price || 0).toFixed(2);
+                let cls = 'item-name';
+                if (isCouponItem(item)) cls = 'item-name discount';
+                else if (isReturnItem(item)) cls = 'item-name return-item';
+                const qty = item.quantity && item.quantity > 1 ? ` ×${item.quantity}` : '';
+                html += `<li><span class="${cls}">${name}${qty}</span><span class="item-price${item.total_price < 0 ? ' discount' : ''}">${item.total_price < 0 ? '-' : ''}$${Math.abs(item.total_price || 0).toFixed(2)}</span></li>`;
+            });
+            html += '</ul>';
+            html += `<div style="display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-weight:700;font-size:0.9rem;"><span>Total</span><span>$${(receipt.total || 0).toFixed(2)}</span></div>`;
+            return html;
         }
 
+        function getDisplayName(item) {
+            if (item.item_number && itemCatalog[item.item_number]) return itemCatalog[item.item_number];
+            return item.item_name || 'Unknown';
+        }
+
+        function toggleReceipt(row, id) {
+            const detail = document.getElementById('detail-' + id);
+            const isOpen = detail.classList.contains('open');
+            // Close all open
+            document.querySelectorAll('.receipt-detail.open').forEach(el => el.classList.remove('open'));
+            if (!isOpen) detail.classList.add('open');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr + 'T12:00:00');
+            return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        }
+
+        // ========== ANALYTICS TAB ==========
         let chartInstances = [];
 
         function renderAnalytics() {
-            const chartsGrid = document.getElementById('charts-grid');
-            const grid = document.getElementById('analytics-grid');
-
-            // Destroy previous chart instances
+            // Destroy previous charts
             chartInstances.forEach(c => c.destroy());
             chartInstances = [];
 
-            // Data aggregation
-            const byCat = {};
-            allReceipts.forEach(r => {
-                const cat = r.category || 'uncategorized';
-                byCat[cat] = (byCat[cat] || 0) + (r.total || 0);
+            renderMonthlyStackedChart();
+            renderStorePieChart();
+            renderStoreBreakdown();
+        }
+
+        function renderMonthlyStackedChart() {
+            const canvas = document.getElementById('chart-monthly-stacked');
+            const ctx = canvas.getContext('2d');
+
+            // Get all months sorted
+            const months = getAvailableMonths().reverse(); // chronological
+
+            // Get high-level categories
+            const highLevelCats = ['Produce/Meat/Fish', 'Dairy/Deli', 'Grocery/Snacks', 'Household', 'Electronics', 'Clothing', 'Gas', 'Dining', 'Other'];
+
+            // Build data per month per category (from items, excluding returns & coupons)
+            const datasets = {};
+            highLevelCats.forEach(cat => { datasets[cat] = []; });
+
+            months.forEach(month => {
+                const monthItems = allItems.filter(i => i.purchase_date && i.purchase_date.startsWith(month) && !isCouponItem(i) && (i.total_price || 0) > 0);
+                const catTotals = {};
+                highLevelCats.forEach(cat => { catTotals[cat] = 0; });
+
+                monthItems.forEach(item => {
+                    let cat = getItemCategory(item);
+                    if (!highLevelCats.includes(cat)) cat = 'Other';
+                    catTotals[cat] += item.total_price || 0;
+                });
+
+                highLevelCats.forEach(cat => {
+                    datasets[cat].push(catTotals[cat]);
+                });
             });
 
+            // Only include categories that have data
+            const activeDatasets = highLevelCats
+                .filter(cat => datasets[cat].some(v => v > 0))
+                .map(cat => ({
+                    label: cat,
+                    data: datasets[cat],
+                    backgroundColor: CATEGORY_COLORS[cat] || '#888',
+                    borderWidth: 0,
+                    borderRadius: 2
+                }));
+
+            const labels = months.map(m => {
+                const [y, mo] = m.split('-');
+                return new Date(y, parseInt(mo) - 1).toLocaleDateString('en-US', { month: 'short', year: '2-digit' });
+            });
+
+            chartInstances.push(new Chart(ctx, {
+                type: 'bar',
+                data: { labels, datasets: activeDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    onClick: (e, elements) => {
+                        if (elements.length > 0) {
+                            const idx = elements[0].index;
+                            setFilter(months[idx]);
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#ccc', font: { size: 11 }, boxWidth: 12, padding: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => `${ctx.dataset.label}: $${ctx.parsed.y.toFixed(0)}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2a2a' } },
+                        y: { stacked: true, ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } }
+                    }
+                }
+            }));
+        }
+
+        function renderStorePieChart() {
+            const canvas = document.getElementById('chart-store-pie');
+            const ctx = canvas.getContext('2d');
+
+            const receipts = getFilteredReceipts().filter(r => !isReturn(r));
             const byStore = {};
-            allReceipts.forEach(r => {
-                byStore[r.store_name] = (byStore[r.store_name] || 0) + (r.total || 0);
+            receipts.forEach(r => {
+                const store = r.store_name || 'Unknown';
+                byStore[store] = (byStore[store] || 0) + (r.total || 0);
             });
 
-            const byMonth = {};
-            allReceipts.forEach(r => {
-                const month = r.purchase_date ? r.purchase_date.substring(0, 7) : 'unknown';
-                byMonth[month] = (byMonth[month] || 0) + (r.total || 0);
-            });
+            const entries = Object.entries(byStore).sort((a, b) => b[1] - a[1]);
+            const colors = ['#6c9eff', '#4caf50', '#ff9800', '#a66cff', '#ff6b9d', '#36d1dc', '#ffd93d', '#f7797d'];
 
-            const byItemCat = {};
-            allItems.forEach(i => {
-                const cat = i.category || 'other';
-                byItemCat[cat] = (byItemCat[cat] || 0) + (i.total_price || 0);
-            });
-
-            const byDow = { Sun: 0, Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0 };
-            const dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-            allReceipts.forEach(r => {
-                if (r.purchase_date) {
-                    const d = new Date(r.purchase_date + 'T12:00:00');
-                    byDow[dowNames[d.getDay()]] += (r.total || 0);
+            chartInstances.push(new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: entries.map(e => e[0]),
+                    datasets: [{
+                        data: entries.map(e => e[1]),
+                        backgroundColor: colors.slice(0, entries.length),
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#ccc', font: { size: 11 }, boxWidth: 12 } },
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                                    return `${ctx.label}: $${ctx.parsed.toFixed(0)} (${((ctx.parsed / total) * 100).toFixed(1)}%)`;
+                                }
+                            }
+                        }
+                    }
                 }
+            }));
+        }
+
+        function renderStoreBreakdown() {
+            const container = document.getElementById('store-breakdown');
+            const items = getFilteredItems().filter(i => (i.total_price || 0) > 0 && !isCouponItem(i));
+
+            // Group by store → category
+            const byStore = {};
+            items.forEach(item => {
+                const store = item.store_name || 'Unknown';
+                if (!byStore[store]) byStore[store] = {};
+                let cat = getItemCategory(item);
+                byStore[store][cat] = (byStore[store][cat] || 0) + (item.total_price || 0);
             });
 
-            const byItem = {};
-            allItems.forEach(i => {
-                const name = i.item_name.toLowerCase();
-                if (!byItem[name]) byItem[name] = { name: i.item_name, count: 0, total: 0 };
-                byItem[name].count++;
-                byItem[name].total += i.total_price || 0;
-            });
+            // Sort stores by total
+            const storeEntries = Object.entries(byStore).map(([store, cats]) => ({
+                store,
+                total: Object.values(cats).reduce((a, b) => a + b, 0),
+                categories: Object.entries(cats).sort((a, b) => b[1] - a[1])
+            })).sort((a, b) => b.total - a.total);
 
-            // Cumulative spending over time
-            const sortedReceipts = [...allReceipts].sort((a,b) => (a.purchase_date||'').localeCompare(b.purchase_date||''));
-            let cumulative = 0;
-            const cumulData = sortedReceipts.map(r => { cumulative += r.total || 0; return { x: r.purchase_date, y: cumulative }; });
-
-            // Build charts HTML
-            chartsGrid.innerHTML = `
-                <div class="chart-card">
-                    <h3>Monthly Spending</h3>
-                    <div class="chart-container"><canvas id="chart-monthly"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>Spending by Receipt Category</h3>
-                    <div class="chart-container"><canvas id="chart-category"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>Item Category Breakdown</h3>
-                    <div class="chart-container"><canvas id="chart-item-cat"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>Spending by Day of Week</h3>
-                    <div class="chart-container"><canvas id="chart-dow"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>Top Stores</h3>
-                    <div class="chart-container"><canvas id="chart-stores"></canvas></div>
-                </div>
-                <div class="chart-card">
-                    <h3>Top Items by Spend</h3>
-                    <div class="chart-container"><canvas id="chart-items"></canvas></div>
-                </div>
-                <div class="chart-card chart-card-wide">
-                    <h3>Cumulative Spending Over Time</h3>
-                    <div class="chart-container"><canvas id="chart-cumulative"></canvas></div>
-                </div>
-            `;
-
-            const palette = ['#6c9eff','#ff6b6b','#ffd93d','#6bcb77','#a66cff','#ff8c42','#36d1dc','#f7797d','#c6ffdd','#e2b0ff'];
-            const chartDefaults = { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { labels: { color: '#ccc', font: { size: 11 } } } }, scales: {} };
-            const darkScales = { x: { ticks: { color: '#888' }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } } };
-
-            setTimeout(() => {
-                // Monthly bar
-                const months = Object.keys(byMonth).sort();
-                chartInstances.push(new Chart(document.getElementById('chart-monthly'), {
-                    type: 'bar',
-                    data: { labels: months, datasets: [{ label: 'Spent', data: months.map(m => byMonth[m]), backgroundColor: '#6c9eff88', borderColor: '#6c9eff', borderWidth: 1, borderRadius: 4 }] },
-                    options: { ...chartDefaults, plugins: { legend: { display: false } }, scales: darkScales }
-                }));
-
-                // Category doughnut
-                const catEntries = Object.entries(byCat).sort((a,b) => b[1] - a[1]);
-                chartInstances.push(new Chart(document.getElementById('chart-category'), {
-                    type: 'doughnut',
-                    data: { labels: catEntries.map(e => e[0]), datasets: [{ data: catEntries.map(e => e[1]), backgroundColor: palette.slice(0, catEntries.length), borderWidth: 0 }] },
-                    options: { ...chartDefaults, plugins: { legend: { position: 'right', labels: { color: '#ccc' } }, tooltip: { callbacks: { label: ctx => `$${ctx.parsed.toFixed(2)} (${((ctx.parsed / catEntries.reduce((s,e)=>s+e[1],0))*100).toFixed(1)}%)` } } } }
-                }));
-
-                // Item category doughnut
-                const itemCatEntries = Object.entries(byItemCat).sort((a,b) => b[1] - a[1]);
-                chartInstances.push(new Chart(document.getElementById('chart-item-cat'), {
-                    type: 'doughnut',
-                    data: { labels: itemCatEntries.map(e => e[0]), datasets: [{ data: itemCatEntries.map(e => e[1]), backgroundColor: palette.slice(0, itemCatEntries.length), borderWidth: 0 }] },
-                    options: { ...chartDefaults, plugins: { legend: { position: 'right', labels: { color: '#ccc' } }, tooltip: { callbacks: { label: ctx => `$${ctx.parsed.toFixed(2)}` } } } }
-                }));
-
-                // Day of week bar
-                chartInstances.push(new Chart(document.getElementById('chart-dow'), {
-                    type: 'bar',
-                    data: { labels: dowNames, datasets: [{ label: 'Spent', data: dowNames.map(d => byDow[d]), backgroundColor: '#4caf5088', borderColor: '#4caf50', borderWidth: 1, borderRadius: 4 }] },
-                    options: { ...chartDefaults, plugins: { legend: { display: false } }, scales: darkScales }
-                }));
-
-                // Top stores horizontal bar
-                const storeEntries = Object.entries(byStore).sort((a,b) => b[1] - a[1]).slice(0, 8);
-                chartInstances.push(new Chart(document.getElementById('chart-stores'), {
-                    type: 'bar',
-                    data: { labels: storeEntries.map(e => e[0]), datasets: [{ label: 'Total', data: storeEntries.map(e => e[1]), backgroundColor: palette.slice(0, storeEntries.length), borderWidth: 0, borderRadius: 4 }] },
-                    options: { ...chartDefaults, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#ccc' }, grid: { display: false } } } }
-                }));
-
-                // Top items horizontal bar
-                const topItems = Object.values(byItem).sort((a,b) => b.total - a.total).slice(0, 8);
-                chartInstances.push(new Chart(document.getElementById('chart-items'), {
-                    type: 'bar',
-                    data: { labels: topItems.map(i => i.name), datasets: [{ label: 'Total', data: topItems.map(i => i.total), backgroundColor: palette.slice(0, topItems.length), borderWidth: 0, borderRadius: 4 }] },
-                    options: { ...chartDefaults, indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } }, y: { ticks: { color: '#ccc' }, grid: { display: false } } } }
-                }));
-
-                // Cumulative line
-                if (cumulData.length > 0) {
-                    chartInstances.push(new Chart(document.getElementById('chart-cumulative'), {
-                        type: 'line',
-                        data: { labels: cumulData.map(d => d.x), datasets: [{ label: 'Cumulative', data: cumulData.map(d => d.y), borderColor: '#ff8c42', backgroundColor: '#ff8c4222', fill: true, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#ff8c42' }] },
-                        options: { ...chartDefaults, plugins: { legend: { display: false } }, scales: darkScales }
-                    }));
-                }
-            }, 50);
-
-            // Tables below charts
-            let html = '<h2>Top Items by Frequency</h2><div class="table-wrapper"><table><thead><tr><th>Item</th><th>Times Bought</th><th class="amount">Total Spent</th><th class="amount">Avg Price</th></tr></thead><tbody>';
-            Object.values(byItem).sort((a, b) => b.count - a.count).slice(0, 15).forEach(item => {
-                html += `<tr><td>${item.name}</td><td>${item.count}</td><td class="amount">$${item.total.toFixed(2)}</td><td class="amount">$${(item.total / item.count).toFixed(2)}</td></tr>`;
-            });
-            html += '</tbody></table></div>';
-            grid.innerHTML = html;
-        }
-
-        function populateFilters() {
-            const sel = document.getElementById('filter-category');
-            const cats = [...new Set(allReceipts.map(r => r.category).filter(Boolean))].sort();
-            cats.forEach(c => { sel.innerHTML += `<option value="${c}">${c}</option>`; });
-        }
-
-        function applyFilters() {
-            let filtered = [...allReceipts];
-            const from = document.getElementById('filter-from').value;
-            const to = document.getElementById('filter-to').value;
-            const store = document.getElementById('filter-store').value.toLowerCase();
-            const cat = document.getElementById('filter-category').value;
-
-            if (from) filtered = filtered.filter(r => r.purchase_date >= from);
-            if (to) filtered = filtered.filter(r => r.purchase_date <= to);
-            if (store) filtered = filtered.filter(r => (r.store_name || '').toLowerCase().includes(store));
-            if (cat) filtered = filtered.filter(r => r.category === cat);
-
-            renderReceipts(filtered);
-        }
-
-        function filterItems() {
-            const q = document.getElementById('filter-item').value.toLowerCase();
-            const filtered = q ? allItems.filter(i => i.item_name.toLowerCase().includes(q)) : allItems;
-            renderItems(filtered);
-        }
-
-        function showReceipt(id) {
-            const r = allReceipts.find(x => x.id === id);
-            const items = allItems.filter(i => i.receipt_id === id);
-            const modal = document.getElementById('modal');
-            const content = document.getElementById('modal-content');
-            
-            content.innerHTML = `
-                <span class="close" onclick="document.getElementById('modal').classList.remove('active')">✕</span>
-                <h3>${r.store_name}</h3>
-                <p style="color:var(--muted)">${r.purchase_date}${r.purchase_time ? ' at ' + r.purchase_time : ''} • ${r.store_location || ''}</p>
-                <hr style="border-color:var(--border);margin:12px 0">
-                ${items.map(i => `
-                    <div class="item-row">
-                        <span>${i.item_name} ${i.quantity > 1 ? '×' + i.quantity : ''}${i.unit ? ' ' + i.unit : ''}</span>
-                        <span class="amount">$${(i.total_price || 0).toFixed(2)}${i.discount ? ' (-$' + i.discount.toFixed(2) + ')' : ''}</span>
+            let html = '';
+            storeEntries.forEach(({ store, total, categories }) => {
+                html += `<div class="store-section">
+                    <div class="store-header" onclick="toggleStoreSection(this)">
+                        <span class="store-name">${store}</span>
+                        <span style="display:flex;align-items:center;gap:12px;">
+                            <span class="store-total">$${total.toFixed(0)}</span>
+                            <span class="arrow">▶</span>
+                        </span>
                     </div>
-                `).join('')}
-                <hr style="border-color:var(--border);margin:12px 0">
-                <div class="item-row"><span>Subtotal</span><span class="amount">$${(r.subtotal || 0).toFixed(2)}</span></div>
-                <div class="item-row"><span>Tax</span><span class="amount">$${(r.tax || 0).toFixed(2)}</span></div>
-                ${r.tip ? `<div class="item-row"><span>Tip</span><span class="amount">$${r.tip.toFixed(2)}</span></div>` : ''}
-                <div class="item-row" style="font-weight:700"><span>Total</span><span class="amount">$${(r.total || 0).toFixed(2)}</span></div>
-                <p style="margin-top:12px;color:var(--muted);font-size:0.85rem">${r.payment_method || ''}${r.card_last4 ? ' •••• ' + r.card_last4 : ''}</p>
-            `;
-            modal.classList.add('active');
+                    <div class="store-categories">
+                        ${categories.map(([cat, amount]) => `
+                            <div class="store-cat-row">
+                                <span class="store-cat-name">${cat}</span>
+                                <span class="store-cat-amount">$${amount.toFixed(0)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>`;
+            });
+
+            container.innerHTML = html;
+
+            // Also render a horizontal bar in the chart-container-small
+            renderCategoryBarChart(items);
         }
 
-        function closeModal(e) { if (e.target === e.currentTarget) e.currentTarget.classList.remove('active'); }
+        function renderCategoryBarChart(items) {
+            const container = document.getElementById('store-breakdown-container');
+            container.innerHTML = '<canvas id="chart-category-bar"></canvas>';
+            const ctx = document.getElementById('chart-category-bar').getContext('2d');
 
+            const byCat = {};
+            items.forEach(item => {
+                let cat = getItemCategory(item);
+                byCat[cat] = (byCat[cat] || 0) + (item.total_price || 0);
+            });
+
+            const entries = Object.entries(byCat).sort((a, b) => b[1] - a[1]).slice(0, 8);
+
+            chartInstances.push(new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: entries.map(e => e[0]),
+                    datasets: [{
+                        data: entries.map(e => e[1]),
+                        backgroundColor: entries.map(e => CATEGORY_COLORS[e[0]] || '#888'),
+                        borderWidth: 0,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: '#888', callback: v => '$' + v }, grid: { color: '#2a2a2a' } },
+                        y: { ticks: { color: '#ccc', font: { size: 10 } }, grid: { display: false } }
+                    }
+                }
+            }));
+        }
+
+        function toggleStoreSection(header) {
+            header.classList.toggle('expanded');
+            const cats = header.nextElementSibling;
+            cats.classList.toggle('open');
+        }
+
+        // ========== TAB SWITCHING ==========
         function showTab(tab) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
-            event.target.classList.add('active');
-            document.getElementById('tab-' + tab).style.display = 'block';
+            document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+            document.getElementById('tab-analytics').style.display = tab === 'analytics' ? 'block' : 'none';
+            document.getElementById('tab-receipts').style.display = tab === 'receipts' ? 'block' : 'none';
         }
-
-        function exportCSV() {
-            let csv = 'Date,Store,Category,Total,Tax,Payment,Items\n';
-            allReceipts.forEach(r => {
-                const itemCount = allItems.filter(i => i.receipt_id === r.id).length;
-                csv += `"${r.purchase_date}","${r.store_name}","${r.category || ''}",${r.total},${r.tax || 0},"${r.payment_method || ''}",${itemCount}\n`;
-            });
-            download(csv, 'receipts_export.csv', 'text/csv');
-        }
-
-        function exportJSON() {
-            const data = allReceipts.map(r => ({
-                ...r,
-                items: allItems.filter(i => i.receipt_id === r.id)
-            }));
-            download(JSON.stringify(data, null, 2), 'receipts_export.json', 'application/json');
-        }
-
-        function download(content, filename, type) {
-            const blob = new Blob([content], { type });
-            const a = document.createElement('a');
-            a.href = URL.createObjectURL(blob);
-            a.download = filename;
-            a.click();
-        }
-
-        // Persist passphrase in localStorage
-        function saveKey(key) { localStorage.setItem('vault_key', key); }
-        function loadKey() { return localStorage.getItem('vault_key'); }
-        function clearKey() { localStorage.removeItem('vault_key'); }
-
-        // Auto-unlock if key is saved (with retry on failure)
-        let autoRetryCount = 0;
-        window.addEventListener('DOMContentLoaded', () => {
-            const saved = loadKey();
-            if (saved) {
-                document.getElementById('passphrase').value = saved;
-                unlock(true);
-            }
-        });
-
-        // Enter key to unlock
-        document.getElementById('passphrase').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
     </script>
 </body>
 </html>
