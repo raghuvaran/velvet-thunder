@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Receipt Search</title>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #222;
+  --border: #2a2a2a;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --accent: #4a9eff;
+  --accent-dim: #2a5a8a;
+  --green: #4caf50;
+  --red: #ef5350;
+  --orange: #ff9800;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 1.5rem 1rem;
+}
+.container { max-width: 900px; margin: 0 auto; }
+
+/* Unlock */
+#unlock-screen {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 60vh; gap: 12px;
+}
+#unlock-screen h1 { font-size: 1.3rem; color: var(--accent); }
+#unlock-screen input {
+  width: 100%; max-width: 360px; padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 1rem; outline: none;
+}
+#unlock-screen input:focus { border-color: var(--accent); }
+#unlock-screen button {
+  padding: 10px 32px; background: var(--accent); color: #fff;
+  border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;
+}
+#unlock-status { color: var(--text-muted); font-size: 0.85rem; }
+#unlock-error { color: var(--red); font-size: 0.85rem; }
+
+/* Main */
+#main { display: none; }
+h1 { font-size: 1.4rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.5rem; }
+.subtitle { color: var(--text-muted); margin-bottom: 1.2rem; font-size: 0.85rem; }
+.nav-link { color: var(--accent); font-size: 0.8rem; text-decoration: none; margin-left: auto; }
+
+.search-box { position: relative; margin-bottom: 1.2rem; }
+.search-box input {
+  width: 100%; padding: 0.85rem 1rem 0.85rem 2.6rem; font-size: 1rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text); outline: none;
+}
+.search-box input:focus { border-color: var(--accent); }
+.search-box input::placeholder { color: var(--text-muted); }
+.search-box .icon { position: absolute; left: 0.9rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+
+.stats-bar { display: flex; gap: 0.8rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.8rem; }
+.stat .label { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat .value { font-weight: 600; margin-top: 1px; }
+
+.results-info { color: var(--text-muted); font-size: 0.82rem; margin-bottom: 0.6rem; }
+.results { display: flex; flex-direction: column; gap: 0.8rem; }
+
+.item-group { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.item-header { padding: 0.8rem 1rem; display: flex; justify-content: space-between; align-items: flex-start; gap: 0.8rem; cursor: pointer; }
+.item-header:hover { background: var(--surface2); }
+.item-info { min-width: 0; flex: 1; }
+.item-name { font-weight: 600; font-size: 0.92rem; margin-bottom: 3px; }
+.item-meta { font-size: 0.78rem; color: var(--text-muted); display: flex; gap: 0.6rem; flex-wrap: wrap; align-items: center; }
+.tag { background: var(--border); padding: 1px 6px; border-radius: 4px; font-size: 0.72rem; }
+.tag-return { background: rgba(239,83,80,0.15); color: var(--red); }
+.tag-purchase { background: rgba(76,175,80,0.15); color: var(--green); }
+.item-summary { text-align: right; white-space: nowrap; }
+.item-summary .price { font-weight: 700; font-size: 1.05rem; color: var(--green); }
+.item-summary .price-range { font-size: 0.72rem; color: var(--text-muted); margin-top: 1px; }
+
+.timeline { border-top: 1px solid var(--border); padding: 0.4rem 1rem 0.6rem; }
+.timeline-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; font-size: 0.8rem; border-bottom: 1px solid var(--border); }
+.timeline-row:last-child { border-bottom: none; }
+.tl-left { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
+.tl-date { font-weight: 500; min-width: 80px; }
+.tl-badge { font-size: 0.68rem; padding: 1px 5px; border-radius: 3px; font-weight: 600; min-width: 50px; text-align: center; }
+.tl-badge.purchase { background: rgba(76,175,80,0.15); color: var(--green); }
+.tl-badge.return { background: rgba(239,83,80,0.15); color: var(--red); }
+.tl-store { color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tl-price { font-weight: 600; white-space: nowrap; }
+.tl-price.positive { color: var(--green); }
+.tl-price.negative { color: var(--red); }
+.tl-price.zero { color: var(--text-muted); }
+
+.also-known { font-size: 0.72rem; color: var(--text-muted); padding: 0 1rem 0.4rem; font-style: italic; }
+.empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--text-muted); }
+.empty-state .big { font-size: 2.2rem; margin-bottom: 0.4rem; }
+
+@media (max-width: 600px) {
+  body { padding: 1rem 0.5rem; }
+  .item-header { flex-direction: column; gap: 0.4rem; }
+  .item-summary { text-align: left; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Unlock Screen -->
+  <div id="unlock-screen">
+    <h1>🔐 Receipt Vault</h1>
+    <input type="password" id="passphrase" placeholder="Enter passphrase" autocomplete="off">
+    <button onclick="unlock()">Unlock</button>
+    <div id="unlock-status"></div>
+    <div id="unlock-error"></div>
+  </div>
+
+  <!-- Main Search UI -->
+  <div id="main">
+    <div style="display:flex; align-items:center;">
+      <h1>🧾 Receipt Search</h1>
+      <a class="nav-link" href="index.html">← Dashboard</a>
+    </div>
+    <p class="subtitle">Search purchases by product name or item number — full buy/return timeline</p>
+
+    <div class="search-box">
+      <span class="icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search items... (e.g. 'salmon', '1816600', 'kirkland')" autofocus>
+    </div>
+
+    <div class="stats-bar" id="statsBar"></div>
+    <div class="results-info" id="resultsInfo"></div>
+    <div class="results" id="results">
+      <div class="empty-state"><div class="big">🛒</div><p>Start typing to search your purchase history</p></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script>
+const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/vault.enc';
+const KEY_STORAGE = 'vt_key';
+
+let db = null;
+
+// Auto-unlock if key stored
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = sessionStorage.getItem(KEY_STORAGE);
+  if (saved) {
+    document.getElementById('passphrase').value = saved;
+    unlock(true);
+  }
+  document.getElementById('passphrase').addEventListener('keydown', e => {
+    if (e.key === 'Enter') unlock();
+  });
+});
+
+async function unlock(isAuto = false) {
+  const passphrase = document.getElementById('passphrase').value;
+  if (!passphrase) return;
+  const status = document.getElementById('unlock-status');
+  const error = document.getElementById('unlock-error');
+  error.textContent = '';
+  status.textContent = 'Fetching vault...';
+
+  try {
+    const resp = await fetch(VAULT_URL);
+    if (!resp.ok) throw new Error('Failed to fetch vault');
+    const encData = await resp.arrayBuffer();
+    status.textContent = 'Decrypting...';
+
+    const decrypted = await decryptOpenSSL(new Uint8Array(encData), passphrase);
+    status.textContent = 'Loading database...';
+
+    const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
+    db = new SQL.Database(decrypted);
+
+    sessionStorage.setItem(KEY_STORAGE, passphrase);
+    document.getElementById('unlock-screen').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+    loadStats();
+    document.getElementById('searchInput').focus();
+  } catch (e) {
+    error.textContent = isAuto ? '' : 'Decryption failed — wrong passphrase?';
+    status.textContent = '';
+    if (isAuto) sessionStorage.removeItem(KEY_STORAGE);
+    console.error(e);
+  }
+}
+
+async function decryptOpenSSL(data, passphrase) {
+  const header = new TextDecoder().decode(data.slice(0, 8));
+  if (header !== 'Salted__') throw new Error('Invalid format');
+  const salt = data.slice(8, 16);
+  const ciphertext = data.slice(16);
+
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    keyMaterial, 384
+  );
+
+  const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), { name: 'AES-CBC' }, false, ['decrypt']);
+  const iv = bits.slice(32, 48);
+  const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: new Uint8Array(iv) }, key, ciphertext);
+  return new Uint8Array(decrypted);
+}
+
+function loadStats() {
+  const purchases = db.exec("SELECT COUNT(*) FROM receipts WHERE notes IS NULL OR notes NOT LIKE '%Return%'")[0].values[0][0];
+  const returns = db.exec("SELECT COUNT(*) FROM receipts WHERE notes LIKE '%Return%'")[0].values[0][0];
+  const items = db.exec("SELECT COUNT(*) FROM line_items")[0].values[0][0];
+  const spent = db.exec("SELECT COALESCE(SUM(total),0) FROM receipts WHERE notes IS NULL OR notes NOT LIKE '%Return%'")[0].values[0][0];
+  const uniqueItems = db.exec("SELECT COUNT(DISTINCT item_number) FROM line_items WHERE item_number IS NOT NULL AND item_number != ''")[0].values[0][0];
+  const range = db.exec("SELECT MIN(purchase_date), MAX(purchase_date) FROM receipts")[0].values[0];
+
+  document.getElementById('statsBar').innerHTML = `
+    <div class="stat"><div class="label">Purchases</div><div class="value">${purchases}</div></div>
+    <div class="stat"><div class="label">Returns</div><div class="value">${returns}</div></div>
+    <div class="stat"><div class="label">Unique Items</div><div class="value">${uniqueItems}</div></div>
+    <div class="stat"><div class="label">Spent</div><div class="value">$${Math.round(spent).toLocaleString()}</div></div>
+    <div class="stat"><div class="label">Since</div><div class="value">${range[0]}</div></div>
+  `;
+}
+
+// Search
+let debounceTimer;
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('searchInput').addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(doSearch, 200);
+  });
+});
+
+function doSearch() {
+  const q = document.getElementById('searchInput').value.trim();
+  const resultsDiv = document.getElementById('results');
+  const resultsInfo = document.getElementById('resultsInfo');
+
+  if (!q || !db) {
+    resultsDiv.innerHTML = '<div class="empty-state"><div class="big">🛒</div><p>Start typing to search your purchase history</p></div>';
+    resultsInfo.textContent = '';
+    return;
+  }
+
+  // Find matching item_numbers
+  let itemNumbers = [];
+
+  if (/^\d+$/.test(q)) {
+    itemNumbers = [q];
+  } else {
+    // Search line_items + item_catalog
+    const likeQ = `%${q}%`;
+    const rows = db.exec(`
+      SELECT DISTINCT li.item_number FROM line_items li
+      WHERE li.item_number IS NOT NULL AND li.item_number != ''
+      AND li.item_name LIKE ?
+      LIMIT 100
+    `, [likeQ]);
+    if (rows.length > 0) itemNumbers = rows[0].values.map(r => r[0]);
+
+    // Also search catalog
+    try {
+      const catRows = db.exec(`SELECT item_number FROM item_catalog WHERE display_name LIKE ? LIMIT 100`, [likeQ]);
+      if (catRows.length > 0) {
+        catRows[0].values.forEach(r => {
+          if (!itemNumbers.includes(r[0])) itemNumbers.push(r[0]);
+        });
+      }
+    } catch(e) {}
+  }
+
+  if (itemNumbers.length === 0) {
+    resultsDiv.innerHTML = '<div class="empty-state"><div class="big">🤷</div><p>No matching purchases found</p></div>';
+    resultsInfo.textContent = '';
+    return;
+  }
+
+  // Build groups
+  const groups = [];
+  for (const itemNum of itemNumbers.slice(0, 50)) {
+    const rows = db.exec(`
+      SELECT li.item_name, li.item_number, li.unit_price, li.total_price, li.quantity, li.department,
+             r.purchase_date, r.store_name, r.store_location, r.total as receipt_total, r.notes, r.source
+      FROM line_items li JOIN receipts r ON r.id = li.receipt_id
+      WHERE li.item_number = ?
+      ORDER BY r.purchase_date DESC
+    `, [itemNum]);
+
+    if (!rows.length || !rows[0].values.length) continue;
+
+    const cols = rows[0].columns;
+    const transactions = rows[0].values.map(row => {
+      const obj = {};
+      cols.forEach((c, i) => obj[c] = row[i]);
+      obj.type = (obj.notes && obj.notes.includes('Return')) || (obj.total_price && obj.total_price < 0) ? 'return' : 'purchase';
+      return obj;
+    });
+
+    const names = [...new Set(transactions.map(t => t.item_name))];
+    // Get catalog name if available
+    let bestName = names.reduce((a, b) => a.length >= b.length ? a : b, '');
+    try {
+      const cat = db.exec("SELECT display_name FROM item_catalog WHERE item_number = ?", [itemNum]);
+      if (cat.length > 0 && cat[0].values.length > 0) bestName = cat[0].values[0][0];
+    } catch(e) {}
+
+    const purchases = transactions.filter(t => t.type === 'purchase');
+    const returns = transactions.filter(t => t.type === 'return');
+    const prices = purchases.map(t => Math.abs(t.unit_price || t.total_price || 0)).filter(p => p > 0);
+    const avgPrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
+
+    groups.push({
+      item_number: itemNum,
+      name: bestName,
+      all_names: names,
+      department: transactions[0].department,
+      purchase_count: purchases.length,
+      return_count: returns.length,
+      avg_price: avgPrice ? Math.round(avgPrice * 100) / 100 : null,
+      min_price: prices.length ? Math.min(...prices) : null,
+      max_price: prices.length ? Math.max(...prices) : null,
+      first_purchased: purchases.length ? purchases[purchases.length - 1].purchase_date : null,
+      last_purchased: purchases.length ? purchases[0].purchase_date : null,
+      transactions,
+    });
+  }
+
+  resultsInfo.textContent = `${groups.length} item${groups.length !== 1 ? 's' : ''} found`;
+  resultsDiv.innerHTML = groups.map(renderGroup).join('');
+}
+
+function renderGroup(g) {
+  const priceDisplay = g.avg_price ? `$${g.avg_price.toFixed(2)}` : '—';
+  const priceRange = (g.min_price && g.max_price && g.min_price !== g.max_price)
+    ? `$${g.min_price.toFixed(2)} – $${g.max_price.toFixed(2)}` : '';
+  const otherNames = g.all_names.filter(n => n !== g.name);
+
+  let html = `<div class="item-group">
+    <div class="item-header" onclick="this.nextElementSibling&&this.nextElementSibling.classList.toggle('collapsed');if(this.parentElement.querySelector('.timeline'))this.parentElement.querySelector('.timeline').classList.toggle('collapsed')">
+      <div class="item-info">
+        <div class="item-name">${esc(g.name)}</div>
+        <div class="item-meta">
+          <span class="tag">#${g.item_number}</span>
+          ${g.department ? `<span class="tag">Dept ${g.department}</span>` : ''}
+          <span class="tag tag-purchase">🛒 ${g.purchase_count}×</span>
+          ${g.return_count > 0 ? `<span class="tag tag-return">↩️ ${g.return_count}×</span>` : ''}
+          ${g.first_purchased ? `<span>${g.first_purchased} → ${g.last_purchased}</span>` : ''}
+        </div>
+      </div>
+      <div class="item-summary">
+        <div class="price">${priceDisplay}</div>
+        ${priceRange ? `<div class="price-range">${priceRange}</div>` : ''}
+      </div>
+    </div>`;
+
+  if (otherNames.length > 0) {
+    html += `<div class="also-known">Also listed as: ${otherNames.map(esc).join(', ')}</div>`;
+  }
+
+  html += `<div class="timeline">`;
+  g.transactions.forEach(t => {
+    const price = t.unit_price || t.total_price || 0;
+    const absPrice = Math.abs(price);
+    const priceClass = price < 0 ? 'negative' : (price === 0 ? 'zero' : 'positive');
+    const priceStr = price < 0 ? `-$${absPrice.toFixed(2)}` : (price === 0 ? '$0.00' : `$${absPrice.toFixed(2)}`);
+    const badge = t.type === 'return' ? '<span class="tl-badge return">RETURN</span>' : '<span class="tl-badge purchase">BUY</span>';
+    const store = t.store_location || t.store_name || '';
+    const qty = t.quantity && t.quantity !== 1 ? ` × ${t.quantity}` : '';
+    html += `<div class="timeline-row">
+      <div class="tl-left"><span class="tl-date">${t.purchase_date}</span>${badge}<span class="tl-store">${esc(store)}</span></div>
+      <span class="tl-price ${priceClass}">${priceStr}${qty}</span>
+    </div>`;
+  });
+  html += `</div></div>`;
+  return html;
+}
+
+function esc(s) {
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+</script>
+</body>
+</html>
