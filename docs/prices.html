@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Price Tracker</title>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #222;
+  --border: #2a2a2a;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --accent: #4a9eff;
+  --accent-dim: #2a5a8a;
+  --green: #4caf50;
+  --green-dim: #2e7d32;
+  --red: #ef5350;
+  --orange: #ff9800;
+  --purple: #ab47bc;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 1.5rem 1rem;
+}
+.container { max-width: 1000px; margin: 0 auto; }
+
+/* Unlock */
+#unlock-screen {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; min-height: 60vh; gap: 12px;
+}
+#unlock-screen h1 { font-size: 1.3rem; color: var(--accent); }
+#unlock-screen input {
+  width: 100%; max-width: 360px; padding: 12px 16px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 1rem; outline: none;
+}
+#unlock-screen input:focus { border-color: var(--accent); }
+#unlock-screen button {
+  padding: 10px 32px; background: var(--accent); color: #fff;
+  border: none; border-radius: 8px; font-size: 1rem; cursor: pointer;
+}
+#unlock-status { color: var(--text-muted); font-size: 0.85rem; }
+#unlock-error { color: var(--red); font-size: 0.85rem; }
+
+/* Main */
+#main { display: none; }
+.header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
+.header h1 { font-size: 1.4rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; }
+.nav-link { color: var(--accent); font-size: 0.8rem; text-decoration: none; margin-left: auto; }
+
+/* Stats */
+.stats-bar { display: flex; gap: 0.7rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+.stat { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 1rem; min-width: 120px; }
+.stat .label { color: var(--text-muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat .value { font-weight: 700; font-size: 1.1rem; margin-top: 2px; }
+.stat .value.green { color: var(--green); }
+.stat .value.accent { color: var(--accent); }
+
+/* Tabs */
+.tabs { display: flex; gap: 4px; margin-bottom: 1.2rem; border-bottom: 1px solid var(--border); }
+.tab { padding: 10px 18px; cursor: pointer; color: var(--text-muted); font-size: 0.88rem; font-weight: 500;
+       border-bottom: 2px solid transparent; transition: all 0.15s; }
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Filters */
+.filters { display: flex; gap: 0.6rem; margin-bottom: 1rem; flex-wrap: wrap; align-items: center; }
+.filter-btn { padding: 5px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text-muted); cursor: pointer; font-size: 0.78rem; transition: all 0.15s; }
+.filter-btn:hover { border-color: var(--accent); color: var(--text); }
+.filter-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 600; }
+.search-input { padding: 6px 12px; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--text); font-size: 0.85rem; outline: none; width: 200px; }
+.search-input:focus { border-color: var(--accent); }
+
+/* Cards */
+.drops-list { display: flex; flex-direction: column; gap: 0.7rem; }
+.drop-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  padding: 1rem 1.2rem; cursor: pointer; transition: border-color 0.15s; }
+.drop-card:hover { border-color: var(--accent); }
+.drop-card .top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.drop-card .item-name { font-weight: 600; font-size: 0.92rem; }
+.drop-card .item-meta { font-size: 0.75rem; color: var(--text-muted); margin-top: 3px; display: flex; gap: 0.6rem; flex-wrap: wrap; }
+.drop-card .price-change { text-align: right; white-space: nowrap; }
+.drop-card .prices { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 0.9rem; }
+.drop-card .old-price { color: var(--text-muted); text-decoration: line-through; }
+.drop-card .new-price { color: var(--green); font-weight: 700; }
+.drop-card .drop-badge { display: inline-block; background: var(--green-dim); color: var(--green);
+  padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: 700; margin-top: 4px; }
+
+/* Item detail / history */
+.detail-panel { display: none; background: var(--surface2); border: 1px solid var(--border);
+  border-radius: 8px; margin-top: 0.5rem; padding: 1rem; }
+.detail-panel.open { display: block; }
+.history-chart { width: 100%; height: 120px; margin-top: 0.5rem; }
+.history-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; margin-top: 0.8rem; }
+.history-table th { color: var(--text-muted); font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.history-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+.history-table .price-cell { font-family: 'SF Mono', monospace; }
+
+/* All items tab */
+.items-table { width: 100%; font-size: 0.83rem; border-collapse: collapse; }
+.items-table th { color: var(--text-muted); font-weight: 600; text-align: left; padding: 8px 10px;
+  border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap; }
+.items-table th:hover { color: var(--text); }
+.items-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); }
+.items-table tr:hover { background: var(--surface2); }
+.mono { font-family: 'SF Mono', 'Fira Code', monospace; }
+.trend-up { color: var(--red); }
+.trend-down { color: var(--green); }
+.trend-flat { color: var(--text-muted); }
+.tag { background: var(--border); color: var(--text-muted); padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; }
+
+/* Responsive */
+@media (max-width: 600px) {
+  .stats-bar { gap: 0.4rem; }
+  .stat { min-width: 90px; padding: 0.5rem 0.7rem; }
+  .stat .value { font-size: 0.95rem; }
+  .drop-card .top { flex-direction: column; gap: 0.4rem; }
+  .drop-card .price-change { text-align: left; }
+  .search-input { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <!-- Unlock -->
+  <div id="unlock-screen">
+    <h1>📉 Price Tracker</h1>
+    <input type="password" id="passphrase" placeholder="Enter passphrase" autofocus>
+    <button onclick="unlock()">Decrypt</button>
+    <div id="unlock-status"></div>
+    <div id="unlock-error"></div>
+  </div>
+
+  <!-- Main -->
+  <div id="main">
+    <div class="header">
+      <h1>📉 Price Tracker</h1>
+      <a class="nav-link" href="index.html">← Vault</a>
+      <a class="nav-link" href="search.html">🔍 Search</a>
+    </div>
+
+    <div class="stats-bar" id="stats-bar"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="drops" onclick="showTab('drops')">Price Drops</div>
+      <div class="tab" data-tab="items" onclick="showTab('items')">All Items</div>
+      <div class="tab" data-tab="frequent" onclick="showTab('frequent')">Frequently Bought</div>
+    </div>
+
+    <!-- Price Drops Tab -->
+    <div id="tab-drops">
+      <div class="filters">
+        <div class="filter-btn active" data-filter="all" onclick="filterDrops('all')">All</div>
+        <div class="filter-btn" data-filter="recent" onclick="filterDrops('recent')">Last 90 days</div>
+        <div class="filter-btn" data-filter="big" onclick="filterDrops('big')">↓$5+</div>
+        <div class="filter-btn" data-filter="grocery" onclick="filterDrops('grocery')">Grocery</div>
+        <input class="search-input" id="drop-search" placeholder="Search items..." oninput="filterDrops()">
+      </div>
+      <div class="drops-list" id="drops-list"></div>
+    </div>
+
+    <!-- All Items Tab -->
+    <div id="tab-items" style="display:none">
+      <div class="filters">
+        <input class="search-input" id="item-search" placeholder="Search all items..." oninput="renderItems()" style="width:300px">
+        <div class="filter-btn" data-sort="name" onclick="sortItems('name')">Name</div>
+        <div class="filter-btn active" data-sort="last_seen" onclick="sortItems('last_seen')">Recent</div>
+        <div class="filter-btn" data-sort="buy_count" onclick="sortItems('buy_count')">Frequency</div>
+        <div class="filter-btn" data-sort="price_range" onclick="sortItems('price_range')">Volatility</div>
+      </div>
+      <div id="items-container"></div>
+    </div>
+
+    <!-- Frequently Bought Tab -->
+    <div id="tab-frequent" style="display:none">
+      <div class="filters">
+        <div class="filter-btn active" data-freq="5" onclick="filterFrequent(5)">5+ purchases</div>
+        <div class="filter-btn" data-freq="3" onclick="filterFrequent(3)">3+ purchases</div>
+        <div class="filter-btn" data-freq="10" onclick="filterFrequent(10)">10+ purchases</div>
+      </div>
+      <div id="frequent-container"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/sql-wasm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let db = null;
+let allDrops = [];
+let allItems = [];
+let itemSort = 'last_seen';
+let frequentMin = 5;
+let currentDropFilter = 'all';
+
+const VAULT_URL = 'https://raw.githubusercontent.com/raghuvaran/velvet-thunder/main/data/prices.enc';
+
+// ===== Decrypt =====
+async function unlock(isAuto = false) {
+  const passphrase = document.getElementById('passphrase').value;
+  const status = document.getElementById('unlock-status');
+  const error = document.getElementById('unlock-error');
+  error.textContent = '';
+  status.textContent = 'Fetching price data...';
+
+  try {
+    const resp = await fetch(VAULT_URL);
+    if (!resp.ok) throw new Error('Failed to fetch prices vault');
+    const encData = await resp.arrayBuffer();
+    status.textContent = 'Decrypting...';
+
+    const decrypted = await decryptOpenSSL(new Uint8Array(encData), passphrase);
+    status.textContent = 'Loading database...';
+
+    const SQL = await initSqlJs({ locateFile: f => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.10.3/${f}` });
+    db = new SQL.Database(decrypted);
+
+    loadData();
+    saveKey(passphrase);
+    document.getElementById('unlock-screen').style.display = 'none';
+    document.getElementById('main').style.display = 'block';
+  } catch (e) {
+    error.textContent = isAuto ? 'Auto-unlock failed — try entering passphrase' : 'Decryption failed — wrong passphrase?';
+    status.textContent = '';
+    console.error(e);
+  }
+}
+
+async function decryptOpenSSL(data, passphrase) {
+  const header = new TextDecoder().decode(data.slice(0, 8));
+  if (header !== 'Salted__') throw new Error('Invalid encrypted file format');
+  const salt = data.slice(8, 16);
+  const ciphertext = data.slice(16);
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey('raw', enc.encode(passphrase), 'PBKDF2', false, ['deriveBits']);
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' }, keyMaterial, 384
+  );
+  const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), { name: 'AES-CBC' }, false, ['decrypt']);
+  const iv = bits.slice(32, 48);
+  const decrypted = await crypto.subtle.decrypt({ name: 'AES-CBC', iv: new Uint8Array(iv) }, key, ciphertext);
+  return new Uint8Array(decrypted);
+}
+
+function saveKey(k) { localStorage.setItem('vault_key', k); }
+function loadKey() { return localStorage.getItem('vault_key'); }
+
+window.addEventListener('DOMContentLoaded', () => {
+  const saved = loadKey();
+  if (saved) { document.getElementById('passphrase').value = saved; unlock(true); }
+});
+document.getElementById('passphrase').addEventListener('keydown', e => { if (e.key === 'Enter') unlock(); });
+
+// ===== Data Loading =====
+function query(sql) {
+  const result = db.exec(sql);
+  if (!result.length) return [];
+  const cols = result[0].columns;
+  return result[0].values.map(row => {
+    const obj = {};
+    cols.forEach((c, i) => obj[c] = row[i]);
+    return obj;
+  });
+}
+
+function loadData() {
+  allDrops = query(`SELECT * FROM price_drops ORDER BY drop_amount DESC`);
+  allItems = query(`SELECT * FROM items ORDER BY last_seen DESC`);
+
+  renderStats();
+  renderDrops();
+}
+
+function renderStats() {
+  const totalItems = allItems.length;
+  const totalDrops = allDrops.length;
+  const avgDrop = allDrops.length ? (allDrops.reduce((s, d) => s + d.drop_amount, 0) / allDrops.length).toFixed(2) : '0';
+  const maxDrop = allDrops.length ? Math.max(...allDrops.map(d => d.drop_amount)).toFixed(2) : '0';
+  const multiPurchase = allItems.filter(i => i.buy_count >= 2).length;
+
+  document.getElementById('stats-bar').innerHTML = `
+    <div class="stat"><div class="label">Items Tracked</div><div class="value accent">${totalItems}</div></div>
+    <div class="stat"><div class="label">Price Drops</div><div class="value green">${totalDrops}</div></div>
+    <div class="stat"><div class="label">Avg Drop</div><div class="value green">$${avgDrop}</div></div>
+    <div class="stat"><div class="label">Max Drop</div><div class="value green">$${maxDrop}</div></div>
+    <div class="stat"><div class="label">Multi-Purchase</div><div class="value accent">${multiPurchase}</div></div>
+  `;
+}
+
+// ===== Tabs =====
+function showTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tab));
+  document.getElementById('tab-drops').style.display = tab === 'drops' ? 'block' : 'none';
+  document.getElementById('tab-items').style.display = tab === 'items' ? 'block' : 'none';
+  document.getElementById('tab-frequent').style.display = tab === 'frequent' ? 'block' : 'none';
+
+  if (tab === 'items') renderItems();
+  if (tab === 'frequent') renderFrequent();
+}
+
+// ===== Price Drops Tab =====
+function filterDrops(filter) {
+  if (filter) {
+    currentDropFilter = filter;
+    document.querySelectorAll('#tab-drops .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+  }
+  renderDrops();
+}
+
+function renderDrops() {
+  const searchTerm = (document.getElementById('drop-search')?.value || '').toLowerCase();
+  const now = new Date();
+  const ninetyDaysAgo = new Date(now - 90 * 86400000).toISOString().slice(0, 10);
+
+  let filtered = allDrops.filter(d => {
+    if (searchTerm && !d.item_name.toLowerCase().includes(searchTerm) && !d.item_number.includes(searchTerm)) return false;
+    if (currentDropFilter === 'recent' && d.detected_date < ninetyDaysAgo) return false;
+    if (currentDropFilter === 'big' && d.drop_amount < 5) return false;
+    if (currentDropFilter === 'grocery') {
+      const item = allItems.find(i => i.item_number === d.item_number);
+      if (item && item.department && !['13','65','17','19','7'].includes(item.department)) return false;
+    }
+    return true;
+  });
+
+  const container = document.getElementById('drops-list');
+  if (!filtered.length) {
+    container.innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">No price drops match filters</p>';
+    return;
+  }
+
+  container.innerHTML = filtered.map((d, idx) => `
+    <div class="drop-card" onclick="toggleDetail(${idx}, '${d.item_number}')">
+      <div class="top">
+        <div>
+          <div class="item-name">${cleanName(d.item_name)}</div>
+          <div class="item-meta">
+            <span>#${d.item_number}</span>
+            <span>${d.warehouse || ''}</span>
+            <span>${d.detected_date}</span>
+          </div>
+        </div>
+        <div class="price-change">
+          <div class="prices"><span class="old-price">$${d.old_price.toFixed(2)}</span> → <span class="new-price">$${d.new_price.toFixed(2)}</span></div>
+          <div class="drop-badge">↓ $${d.drop_amount.toFixed(2)} (${d.drop_pct}%)</div>
+        </div>
+      </div>
+      <div class="detail-panel" id="detail-${idx}"></div>
+    </div>
+  `).join('');
+}
+
+function toggleDetail(idx, itemNumber) {
+  const panel = document.getElementById(`detail-${idx}`);
+  if (panel.classList.contains('open')) {
+    panel.classList.remove('open');
+    return;
+  }
+  // Close others
+  document.querySelectorAll('.detail-panel.open').forEach(p => p.classList.remove('open'));
+
+  // Load history
+  const history = query(`SELECT price, purchase_date, warehouse FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date`);
+  const item = allItems.find(i => i.item_number === itemNumber);
+
+  let html = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th></tr></thead><tbody>';
+  history.forEach(h => {
+    html += `<tr><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td></tr>`;
+  });
+  html += '</tbody></table>';
+
+  if (item) {
+    html += `<div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
+      Bought ${item.buy_count}× · Range: $${item.lowest_price.toFixed(2)} – $${item.highest_price.toFixed(2)} · Avg: $${item.avg_price.toFixed(2)}
+    </div>`;
+  }
+
+  // Mini chart
+  if (history.length >= 2) {
+    const chartId = `chart-${idx}`;
+    html = `<canvas id="${chartId}" class="history-chart"></canvas>` + html;
+    panel.innerHTML = html;
+    panel.classList.add('open');
+    renderMiniChart(chartId, history);
+  } else {
+    panel.innerHTML = html;
+    panel.classList.add('open');
+  }
+}
+
+function renderMiniChart(canvasId, history) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: history.map(h => h.purchase_date),
+      datasets: [{
+        data: history.map(h => h.price),
+        borderColor: '#4a9eff',
+        backgroundColor: 'rgba(74,158,255,0.1)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4,
+        pointBackgroundColor: '#4a9eff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: true, ticks: { color: '#888', font: { size: 10 } }, grid: { color: '#2a2a2a' } },
+        y: { display: true, ticks: { color: '#888', callback: v => '$' + v.toFixed(0) }, grid: { color: '#2a2a2a' } }
+      }
+    }
+  });
+}
+
+// ===== All Items Tab =====
+function sortItems(sort) {
+  itemSort = sort;
+  document.querySelectorAll('#tab-items .filter-btn').forEach(b => b.classList.toggle('active', b.dataset.sort === sort));
+  renderItems();
+}
+
+function renderItems() {
+  const searchTerm = (document.getElementById('item-search')?.value || '').toLowerCase();
+  let items = allItems.filter(i => {
+    if (searchTerm && !i.item_name.toLowerCase().includes(searchTerm) && !i.item_number.includes(searchTerm)) return false;
+    return true;
+  });
+
+  // Sort
+  items.sort((a, b) => {
+    if (itemSort === 'name') return a.item_name.localeCompare(b.item_name);
+    if (itemSort === 'last_seen') return b.last_seen.localeCompare(a.last_seen);
+    if (itemSort === 'buy_count') return b.buy_count - a.buy_count;
+    if (itemSort === 'price_range') return (b.highest_price - b.lowest_price) - (a.highest_price - a.lowest_price);
+    return 0;
+  });
+
+  // Limit display
+  const display = items.slice(0, 100);
+  const more = items.length > 100 ? `<p style="color:var(--text-muted);font-size:0.8rem;padding:0.5rem;">Showing 100 of ${items.length} — use search to narrow</p>` : '';
+
+  let html = `<table class="items-table"><thead><tr>
+    <th>Item</th><th>Latest</th><th>Low</th><th>High</th><th>Buys</th><th>Last Seen</th><th>Trend</th>
+  </tr></thead><tbody>`;
+
+  display.forEach(item => {
+    const trend = getTrend(item);
+    html += `<tr>
+      <td><span style="font-weight:500">${cleanName(item.item_name)}</span><br><span class="tag">#${item.item_number}</span> ${item.last_warehouse ? '<span class="tag">' + item.last_warehouse + '</span>' : ''}</td>
+      <td class="mono">$${item.latest_price.toFixed(2)}</td>
+      <td class="mono">$${item.lowest_price.toFixed(2)}</td>
+      <td class="mono">$${item.highest_price.toFixed(2)}</td>
+      <td>${item.buy_count}</td>
+      <td style="font-size:0.78rem">${item.last_seen}</td>
+      <td>${trend}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>' + more;
+  document.getElementById('items-container').innerHTML = html;
+}
+
+function getTrend(item) {
+  if (item.buy_count < 2) return '<span class="trend-flat">—</span>';
+  const diff = item.latest_price - item.avg_price;
+  if (diff < -0.5) return `<span class="trend-down">↓ $${Math.abs(diff).toFixed(2)}</span>`;
+  if (diff > 0.5) return `<span class="trend-up">↑ $${diff.toFixed(2)}</span>`;
+  return '<span class="trend-flat">→</span>';
+}
+
+// ===== Frequently Bought Tab =====
+function filterFrequent(min) {
+  frequentMin = min;
+  document.querySelectorAll('#tab-frequent .filter-btn').forEach(b => b.classList.toggle('active', parseInt(b.dataset.freq) === min));
+  renderFrequent();
+}
+
+function renderFrequent() {
+  const items = allItems.filter(i => i.buy_count >= frequentMin).sort((a, b) => b.buy_count - a.buy_count);
+
+  if (!items.length) {
+    document.getElementById('frequent-container').innerHTML = '<p style="color:var(--text-muted);text-align:center;padding:2rem;">No items with ' + frequentMin + '+ purchases</p>';
+    return;
+  }
+
+  let html = `<table class="items-table"><thead><tr>
+    <th>Item</th><th>Purchases</th><th>Price Range</th><th>Latest</th><th>Avg</th><th>Savings Potential</th>
+  </tr></thead><tbody>`;
+
+  items.forEach(item => {
+    const savingsPotential = item.latest_price - item.lowest_price;
+    const savingsHtml = savingsPotential > 0.5
+      ? `<span class="trend-down">$${savingsPotential.toFixed(2)} if at low</span>`
+      : '<span class="trend-flat">At/near low</span>';
+
+    html += `<tr>
+      <td><span style="font-weight:500">${cleanName(item.item_name)}</span><br><span class="tag">#${item.item_number}</span></td>
+      <td style="font-weight:700;color:var(--accent)">${item.buy_count}</td>
+      <td class="mono">$${item.lowest_price.toFixed(2)} – $${item.highest_price.toFixed(2)}</td>
+      <td class="mono">$${item.latest_price.toFixed(2)}</td>
+      <td class="mono">$${item.avg_price.toFixed(2)}</td>
+      <td>${savingsHtml}</td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('frequent-container').innerHTML = html;
+}
+
+// ===== Helpers =====
+function cleanName(name) {
+  if (!name) return 'Unknown';
+  // Clean up Costco's ugly item names: remove extra spaces, internal codes
+  return name.replace(/\s+/g, ' ').replace(/\s*(P\d+|T\d+|H\d+|SL\d+|C\d+T\d+H\d+P\d+|FY\d+\s*\w*\s*MVM)\s*/gi, ' ').trim();
+}
+</script>
+</body>
+</html>

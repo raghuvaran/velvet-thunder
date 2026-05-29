@@ -25,7 +25,10 @@ if [ ! -f "$DB_PATH" ]; then
     exit 1
 fi
 
-# Encrypt with AES-256-GCM using openssl
+PRICES_DB_PATH="/root/.openclaw/workspace/receipts/prices.db"
+PRICES_OUTPUT_PATH="$SCRIPT_DIR/data/prices.enc"
+
+# Encrypt with AES-256-CBC using openssl
 # We use PBKDF2 key derivation (same as the browser UI will use)
 openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt \
     -in "$DB_PATH" \
@@ -33,3 +36,14 @@ openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt \
     -pass "pass:$KEY"
 
 echo "Encrypted $(stat -c%s "$DB_PATH" 2>/dev/null || stat -f%z "$DB_PATH") bytes → $OUTPUT_PATH ($(stat -c%s "$OUTPUT_PATH" 2>/dev/null || stat -f%z "$OUTPUT_PATH") bytes)"
+
+# Encrypt prices.db if it exists
+if [ -f "$PRICES_DB_PATH" ]; then
+    openssl enc -aes-256-cbc -pbkdf2 -iter 100000 -salt \
+        -in "$PRICES_DB_PATH" \
+        -out "$PRICES_OUTPUT_PATH" \
+        -pass "pass:$KEY"
+    echo "Encrypted $(stat -c%s "$PRICES_DB_PATH" 2>/dev/null || stat -f%z "$PRICES_DB_PATH") bytes → $PRICES_OUTPUT_PATH ($(stat -c%s "$PRICES_OUTPUT_PATH" 2>/dev/null || stat -f%z "$PRICES_OUTPUT_PATH") bytes)"
+else
+    echo "WARN: prices.db not found at $PRICES_DB_PATH — run generate-prices-db.py first"
+fi
