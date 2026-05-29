@@ -378,12 +378,15 @@ function toggleDetail(idx, itemNumber) {
   document.querySelectorAll('.detail-panel.open').forEach(p => p.classList.remove('open'));
 
   // Load history
-  const history = query(`SELECT price, purchase_date, warehouse FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date`);
+  const history = query(`SELECT price, purchase_date, warehouse, is_return FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date`);
   const item = allItems.find(i => i.item_number === itemNumber);
 
-  let html = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th></tr></thead><tbody>';
+  let html = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th><th>Type</th></tr></thead><tbody>';
   history.forEach(h => {
-    html += `<tr><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td></tr>`;
+    const isReturn = h.is_return === 1;
+    const rowStyle = isReturn ? ' style="opacity:0.7"' : '';
+    const typeLabel = isReturn ? '<span style="color:var(--orange)">↩ Return</span>' : 'Purchase';
+    html += `<tr${rowStyle}><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td><td>${typeLabel}</td></tr>`;
   });
   html += '</tbody></table>';
 
