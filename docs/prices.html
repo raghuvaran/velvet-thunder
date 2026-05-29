@@ -368,49 +368,94 @@ function renderDrops() {
   `).join('');
 }
 
+// Store history data per panel for toggle reuse
+const panelData = {};
+
 function toggleDetail(idx, itemNumber) {
   const panel = document.getElementById(`detail-${idx}`);
   if (panel.classList.contains('open')) {
     panel.classList.remove('open');
     return;
   }
-  // Close others
   document.querySelectorAll('.detail-panel.open').forEach(p => p.classList.remove('open'));
 
-  // Load history
   const history = query(`SELECT price, purchase_date, warehouse, is_return FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date DESC`);
   const item = allItems.find(i => i.item_number === itemNumber);
+  panelData[idx] = { history, item, itemNumber };
 
-  let html = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th><th>Type</th></tr></thead><tbody>';
+  renderDetailPanel(idx, true);
+}
 
+function toggleHistoryView(idx) {
+  const toggle = document.getElementById(`toggle-${idx}`);
+  renderDetailPanel(idx, toggle.checked);
+}
+
+function renderDetailPanel(idx, smartView) {
+  const panel = document.getElementById(`detail-${idx}`);
+  const { history, item, itemNumber } = panelData[idx];
+
+  // Toggle control
+  let html = `<div style="display:flex;gap:8px;align-items:center;margin-bottom:0.6rem;font-size:0.78rem;">
+    <label style="display:flex;align-items:center;gap:4px;cursor:pointer;color:var(--text-muted);">
+      <input type="checkbox" ${smartView ? 'checked' : ''} onchange="toggleHistoryView(${idx})" id="toggle-${idx}" style="accent-color:var(--accent)">
+      Smart view
+    </label>
+    <span style="color:var(--text-muted);font-size:0.7rem;">${smartView ? 'Consolidated (returns matched)' : 'Raw entries'}</span>
+  </div>`;
+
+  if (smartView) {
+    html += renderSmartTable(history);
+  } else {
+    html += renderRawTable(history);
+  }
+
+  if (item) {
+    html += `<div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
+      Bought ${item.buy_count}× · Range: $${item.lowest_price.toFixed(2)} – $${item.highest_price.toFixed(2)} · Avg: $${item.avg_price.toFixed(2)}
+    </div>`;
+  }
+
+  // Mini chart
+  if (history.length >= 2) {
+    const chartId = `chart-${idx}`;
+    const chronoHistory = [...history].reverse();
+    html = `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` + html;
+    panel.innerHTML = html;
+    panel.classList.add('open');
+    setTimeout(() => renderMiniChart(chartId, chronoHistory), 50);
+  } else {
+    panel.innerHTML = html;
+    panel.classList.add('open');
+  }
+}
+
+function renderSmartTable(history) {
   // Match returns to purchases (FIFO) for strikethrough
   const returns = history.filter(h => h.is_return === 1);
   const matchedPurchaseKeys = new Set();
-  const priceAdjusted = new Set(); // indices of return entries that are price adjustments
+  const priceAdjusted = new Set();
 
   returns.forEach(ret => {
-    // Find earliest unmatched purchase with same price
-    for (let i = history.length - 1; i >= 0; i--) { // iterate chronologically (array is desc)
+    for (let i = history.length - 1; i >= 0; i--) {
       const h = history[i];
       if (h.is_return) continue;
       const key = `${i}`;
       if (matchedPurchaseKeys.has(key)) continue;
       if (h.price === ret.price) {
         matchedPurchaseKeys.add(key);
-        // Check if same-day return+purchase = price adjustment
         const sameDayPurchase = history.find(x => !x.is_return && x.purchase_date === ret.purchase_date && x.price !== ret.price);
-        if (sameDayPurchase) {
-          priceAdjusted.add(history.indexOf(ret));
-        }
+        if (sameDayPurchase) priceAdjusted.add(history.indexOf(ret));
         break;
       }
     }
   });
 
-  history.forEach((h, idx) => {
+  let tbl = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th><th>Type</th></tr></thead><tbody>';
+  history.forEach((h, i) => {
     const isReturn = h.is_return === 1;
-    const isMatched = matchedPurchaseKeys.has(`${idx}`);
-    const isPriceAdj = priceAdjusted.has(idx);
+    const isMatched = matchedPurchaseKeys.has(`${i}`);
+    const isPriceAdj = priceAdjusted.has(i);
     let typeLabel, rowStyle;
 
     if (isReturn && isPriceAdj) {
@@ -426,29 +471,20 @@ function toggleDetail(idx, itemNumber) {
       typeLabel = 'Purchase';
       rowStyle = '';
     }
-
-    html += `<tr${rowStyle}><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td><td>${typeLabel}</td></tr>`;
+    tbl += `<tr${rowStyle}><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td><td>${typeLabel}</td></tr>`;
   });
-  html += '</tbody></table>';
+  tbl += '</tbody></table>';
+  return tbl;
+}
 
-  if (item) {
-    html += `<div style="margin-top:0.8rem;font-size:0.78rem;color:var(--text-muted)">
-      Bought ${item.buy_count}× · Range: $${item.lowest_price.toFixed(2)} – $${item.highest_price.toFixed(2)} · Avg: $${item.avg_price.toFixed(2)}
-    </div>`;
-  }
-
-  // Mini chart (chronological order for visual)
-  if (history.length >= 2) {
-    const chartId = `chart-${idx}`;
-    const chronoHistory = [...history].reverse();
-    html = `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` + html;
-    panel.innerHTML = html;
-    panel.classList.add('open');
-    setTimeout(() => renderMiniChart(chartId, chronoHistory), 50);
-  } else {
-    panel.innerHTML = html;
-    panel.classList.add('open');
-  }
+function renderRawTable(history) {
+  let tbl = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th><th>Type</th></tr></thead><tbody>';
+  history.forEach(h => {
+    const typeLabel = h.is_return === 1 ? '<span style="color:var(--orange)">Return</span>' : 'Purchase';
+    tbl += `<tr><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td><td>${typeLabel}</td></tr>`;
+  });
+  tbl += '</tbody></table>';
+  return tbl;
 }
 
 function renderMiniChart(canvasId, history) {
