@@ -378,14 +378,55 @@ function toggleDetail(idx, itemNumber) {
   document.querySelectorAll('.detail-panel.open').forEach(p => p.classList.remove('open'));
 
   // Load history
-  const history = query(`SELECT price, purchase_date, warehouse, is_return FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date`);
+  const history = query(`SELECT price, purchase_date, warehouse, is_return FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date DESC`);
   const item = allItems.find(i => i.item_number === itemNumber);
 
   let html = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th><th>Type</th></tr></thead><tbody>';
-  history.forEach(h => {
+
+  // Match returns to purchases (FIFO) for strikethrough
+  const returns = history.filter(h => h.is_return === 1);
+  const matchedPurchaseKeys = new Set();
+  const priceAdjusted = new Set(); // indices of return entries that are price adjustments
+
+  returns.forEach(ret => {
+    // Find earliest unmatched purchase with same price
+    for (let i = history.length - 1; i >= 0; i--) { // iterate chronologically (array is desc)
+      const h = history[i];
+      if (h.is_return) continue;
+      const key = `${i}`;
+      if (matchedPurchaseKeys.has(key)) continue;
+      if (h.price === ret.price) {
+        matchedPurchaseKeys.add(key);
+        // Check if same-day return+purchase = price adjustment
+        const sameDayPurchase = history.find(x => !x.is_return && x.purchase_date === ret.purchase_date && x.price !== ret.price);
+        if (sameDayPurchase) {
+          priceAdjusted.add(history.indexOf(ret));
+        }
+        break;
+      }
+    }
+  });
+
+  history.forEach((h, idx) => {
     const isReturn = h.is_return === 1;
-    const rowStyle = isReturn ? ' style="opacity:0.7"' : '';
-    const typeLabel = isReturn ? '<span style="color:var(--orange)">↩ Return</span>' : 'Purchase';
+    const isMatched = matchedPurchaseKeys.has(`${idx}`);
+    const isPriceAdj = priceAdjusted.has(idx);
+    let typeLabel, rowStyle;
+
+    if (isReturn && isPriceAdj) {
+      typeLabel = '<span style="color:var(--accent)">↩ Price Adj</span>';
+      rowStyle = ' style="opacity:0.7"';
+    } else if (isReturn) {
+      typeLabel = '<span style="color:var(--orange)">↩ Return</span>';
+      rowStyle = ' style="opacity:0.7"';
+    } else if (isMatched) {
+      typeLabel = '<span style="color:var(--text-muted)"><s>Returned</s></span>';
+      rowStyle = ' style="opacity:0.5; text-decoration: line-through"';
+    } else {
+      typeLabel = 'Purchase';
+      rowStyle = '';
+    }
+
     html += `<tr${rowStyle}><td>${h.purchase_date}</td><td class="price-cell">$${h.price.toFixed(2)}</td><td>${h.warehouse || ''}</td><td>${typeLabel}</td></tr>`;
   });
   html += '</tbody></table>';
@@ -396,13 +437,14 @@ function toggleDetail(idx, itemNumber) {
     </div>`;
   }
 
-  // Mini chart
+  // Mini chart (chronological order for visual)
   if (history.length >= 2) {
     const chartId = `chart-${idx}`;
+    const chronoHistory = [...history].reverse();
     html = `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` + html;
     panel.innerHTML = html;
     panel.classList.add('open');
-    setTimeout(() => renderMiniChart(chartId, history), 50);
+    setTimeout(() => renderMiniChart(chartId, chronoHistory), 50);
   } else {
     panel.innerHTML = html;
     panel.classList.add('open');
