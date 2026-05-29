@@ -99,7 +99,8 @@ body {
 .detail-panel { display: none; background: var(--surface2); border: 1px solid var(--border);
   border-radius: 8px; margin-top: 0.5rem; padding: 1rem; }
 .detail-panel.open { display: block; }
-.history-chart { width: 100%; height: 120px; margin-top: 0.5rem; }
+.chart-wrap { position: relative; width: 100%; height: 120px; }
+.chart-wrap canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
 .history-table { width: 100%; font-size: 0.8rem; border-collapse: collapse; margin-top: 0.8rem; }
 .history-table th { color: var(--text-muted); font-weight: 600; text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
 .history-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
@@ -117,6 +118,14 @@ body {
 .trend-down { color: var(--green); }
 .trend-flat { color: var(--text-muted); }
 .tag { background: var(--border); color: var(--text-muted); padding: 1px 6px; border-radius: 4px; font-size: 0.7rem; }
+
+/* Sparklines */
+.spark-wrap { position: relative; width: 80px; height: 28px; display: inline-block; vertical-align: middle; }
+.spark-wrap canvas { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; }
+.spark-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 4px; vertical-align: middle; }
+.spark-dot.low { background: var(--green); }
+.spark-dot.mid { background: var(--orange); }
+.spark-dot.high { background: var(--red); }
 
 /* Responsive */
 @media (max-width: 600px) {
@@ -387,10 +396,10 @@ function toggleDetail(idx, itemNumber) {
   // Mini chart
   if (history.length >= 2) {
     const chartId = `chart-${idx}`;
-    html = `<canvas id="${chartId}" class="history-chart"></canvas>` + html;
+    html = `<div class="chart-wrap"><canvas id="${chartId}"></canvas></div>` + html;
     panel.innerHTML = html;
     panel.classList.add('open');
-    renderMiniChart(chartId, history);
+    setTimeout(() => renderMiniChart(chartId, history), 50);
   } else {
     panel.innerHTML = html;
     panel.classList.add('open');
@@ -456,8 +465,9 @@ function renderItems() {
     <th>Item</th><th>Latest</th><th>Low</th><th>High</th><th>Buys</th><th>Last Seen</th><th>Trend</th>
   </tr></thead><tbody>`;
 
-  display.forEach(item => {
+  display.forEach((item, i) => {
     const trend = getTrend(item);
+    const sparkId = `spark-item-${i}`;
     html += `<tr>
       <td><span style="font-weight:500">${cleanName(item.item_name)}</span><br><span class="tag">#${item.item_number}</span> ${item.last_warehouse ? '<span class="tag">' + item.last_warehouse + '</span>' : ''}</td>
       <td class="mono">$${item.latest_price.toFixed(2)}</td>
@@ -465,12 +475,19 @@ function renderItems() {
       <td class="mono">$${item.highest_price.toFixed(2)}</td>
       <td>${item.buy_count}</td>
       <td style="font-size:0.78rem">${item.last_seen}</td>
-      <td>${trend}</td>
+      <td><div class="spark-wrap"><canvas id="${sparkId}"></canvas></div>${trend}</td>
     </tr>`;
   });
 
   html += '</tbody></table>' + more;
   document.getElementById('items-container').innerHTML = html;
+
+  // Render sparklines after DOM update
+  setTimeout(() => {
+    display.forEach((item, i) => {
+      if (item.buy_count >= 2) renderSparkline(`spark-item-${i}`, item.item_number);
+    });
+  }, 50);
 }
 
 function getTrend(item) {
@@ -497,14 +514,15 @@ function renderFrequent() {
   }
 
   let html = `<table class="items-table"><thead><tr>
-    <th>Item</th><th>Purchases</th><th>Price Range</th><th>Latest</th><th>Avg</th><th>Savings Potential</th>
+    <th>Item</th><th>Purchases</th><th>Price Range</th><th>Latest</th><th>Avg</th><th>Trend</th><th>Savings Potential</th>
   </tr></thead><tbody>`;
 
-  items.forEach(item => {
+  items.forEach((item, i) => {
     const savingsPotential = item.latest_price - item.lowest_price;
     const savingsHtml = savingsPotential > 0.5
       ? `<span class="trend-down">$${savingsPotential.toFixed(2)} if at low</span>`
       : '<span class="trend-flat">At/near low</span>';
+    const sparkId = `spark-freq-${i}`;
 
     html += `<tr>
       <td><span style="font-weight:500">${cleanName(item.item_name)}</span><br><span class="tag">#${item.item_number}</span></td>
@@ -512,12 +530,76 @@ function renderFrequent() {
       <td class="mono">$${item.lowest_price.toFixed(2)} – $${item.highest_price.toFixed(2)}</td>
       <td class="mono">$${item.latest_price.toFixed(2)}</td>
       <td class="mono">$${item.avg_price.toFixed(2)}</td>
+      <td><div class="spark-wrap"><canvas id="${sparkId}"></canvas></div></td>
       <td>${savingsHtml}</td>
     </tr>`;
   });
 
   html += '</tbody></table>';
   document.getElementById('frequent-container').innerHTML = html;
+
+  // Render sparklines
+  setTimeout(() => {
+    items.forEach((item, i) => renderSparkline(`spark-freq-${i}`, item.item_number));
+  }, 50);
+}
+
+// ===== Sparklines =====
+const sparkCache = {};
+function getItemHistory(itemNumber) {
+  if (sparkCache[itemNumber]) return sparkCache[itemNumber];
+  const h = query(`SELECT price, purchase_date FROM price_history WHERE item_number = '${itemNumber}' ORDER BY purchase_date`);
+  sparkCache[itemNumber] = h;
+  return h;
+}
+
+function renderSparkline(canvasId, itemNumber) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const history = getItemHistory(itemNumber);
+  if (history.length < 2) return;
+
+  const prices = history.map(h => h.price);
+  const latest = prices[prices.length - 1];
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
+  // Color: green if latest is near low, red if near high, orange if middle
+  const range = max - min || 1;
+  const position = (latest - min) / range; // 0=at low, 1=at high
+  const lineColor = position <= 0.33 ? '#4caf50' : position >= 0.66 ? '#ef5350' : '#ff9800';
+
+  const ctx = canvas.getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: prices.map((_, i) => i),
+      datasets: [{
+        data: prices,
+        borderColor: lineColor,
+        borderWidth: 1.5,
+        fill: false,
+        tension: 0.3,
+        pointRadius: 0,
+        pointHitRadius: 0,
+      }, {
+        // Dot for current position
+        data: prices.map((p, i) => i === prices.length - 1 ? p : null),
+        borderColor: lineColor,
+        backgroundColor: lineColor,
+        pointRadius: 3,
+        pointStyle: 'circle',
+        showLine: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: { x: { display: false }, y: { display: false } },
+      layout: { padding: 2 },
+    }
+  });
 }
 
 // ===== Helpers =====
