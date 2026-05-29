@@ -452,10 +452,22 @@ function renderSmartTable(history) {
   });
 
   let tbl = '<table class="history-table"><thead><tr><th>Date</th><th>Price</th><th>Warehouse</th><th>Type</th></tr></thead><tbody>';
+  // In smart view, hide return rows that have been matched to a purchase
   history.forEach((h, i) => {
     const isReturn = h.is_return === 1;
     const isMatched = matchedPurchaseKeys.has(`${i}`);
     const isPriceAdj = priceAdjusted.has(i);
+
+    // Skip return entries whose matching purchase is already struck through
+    if (isReturn && !isPriceAdj) {
+      // Check if this return was matched (i.e. a purchase was struck for it)
+      const wasMatched = [...matchedPurchaseKeys].some(k => {
+        const matchedH = history[parseInt(k)];
+        return matchedH && matchedH.price === h.price;
+      });
+      if (wasMatched) return; // hide this row
+    }
+
     let typeLabel, rowStyle;
 
     if (isReturn && isPriceAdj) {
