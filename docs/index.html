@@ -779,13 +779,16 @@
             const container = document.getElementById('store-breakdown');
             const items = getFilteredItems().filter(i => (i.total_price || 0) > 0 && !isCouponItem(i));
 
-            // Group by store → category
+            // Group by store → category → items
             const byStore = {};
+            const storeItems = {};
             items.forEach(item => {
                 const store = item.store_name || 'Unknown';
-                if (!byStore[store]) byStore[store] = {};
+                if (!byStore[store]) { byStore[store] = {}; storeItems[store] = {}; }
                 let cat = getItemCategory(item);
                 byStore[store][cat] = (byStore[store][cat] || 0) + (item.total_price || 0);
+                if (!storeItems[store][cat]) storeItems[store][cat] = [];
+                storeItems[store][cat].push(item);
             });
 
             // Sort stores by total
@@ -797,6 +800,7 @@
 
             let html = '';
             storeEntries.forEach(({ store, total, categories }) => {
+                const catItemsForStore = storeItems[store] || {};
                 html += `<div class="store-section">
                     <div class="store-header" onclick="toggleStoreSection(this)">
                         <span class="store-name">${store}</span>
@@ -806,12 +810,29 @@
                         </span>
                     </div>
                     <div class="store-categories">
-                        ${categories.map(([cat, amount]) => `
-                            <div class="store-cat-row">
-                                <span class="store-cat-name">${cat}</span>
-                                <span class="store-cat-amount">$${amount.toFixed(0)}</span>
-                            </div>
-                        `).join('')}
+                        ${categories.map(([cat, amount]) => {
+                            const catItems = (catItemsForStore[cat] || []).sort((a, b) => (b.total_price || 0) - (a.total_price || 0));
+                            const catId = `cat-${store.replace(/\W/g,'')}-${cat.replace(/\W/g,'')}`;
+                            return `
+                            <div class="store-cat-row" style="flex-direction:column;align-items:stretch;">
+                                <div style="display:flex;justify-content:space-between;cursor:pointer;padding:2px 0;" onclick="toggleCatItems('${catId}')">
+                                    <span class="store-cat-name">${cat} <span style="color:var(--muted);font-size:0.72rem;">(${catItems.length})</span></span>
+                                    <span class="store-cat-amount">$${amount.toFixed(0)}</span>
+                                </div>
+                                <div class="cat-items-list" id="${catId}" style="display:none;padding:4px 0 8px 12px;border-left:2px solid var(--border);margin:4px 0 4px 4px;">
+                                    ${catItems.map(it => {
+                                        const name = getDisplayName(it);
+                                        const qty = it.quantity && it.quantity > 1 ? ` ×${it.quantity}` : '';
+                                        const date = it.purchase_date ? it.purchase_date.substring(5) : '';
+                                        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:0.78rem;border-bottom:1px solid var(--border);">
+                                            <span style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;">${name}${qty}</span>
+                                            <span style="color:var(--muted);font-size:0.7rem;margin:0 8px;white-space:nowrap;">${date}</span>
+                                            <span style="font-family:'SF Mono',monospace;white-space:nowrap;">$${(it.total_price||0).toFixed(2)}</span>
+                                        </div>`;
+                                    }).join('')}
+                                </div>
+                            </div>`;
+                        }).join('')}
                     </div>
                 </div>`;
             });
@@ -863,6 +884,11 @@
             header.classList.toggle('expanded');
             const cats = header.nextElementSibling;
             cats.classList.toggle('open');
+        }
+
+        function toggleCatItems(catId) {
+            const el = document.getElementById(catId);
+            if (el) el.style.display = el.style.display === 'none' ? 'block' : 'none';
         }
 
         // ========== TAB SWITCHING ==========
