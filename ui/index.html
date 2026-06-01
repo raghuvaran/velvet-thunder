@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Costco Receipt Search</title>
+<style>
+:root {
+  --bg: #0f0f0f;
+  --surface: #1a1a1a;
+  --surface2: #222;
+  --border: #2a2a2a;
+  --text: #e0e0e0;
+  --text-muted: #888;
+  --accent: #4a9eff;
+  --accent-dim: #2a5a8a;
+  --green: #4caf50;
+  --red: #ef5350;
+  --orange: #ff9800;
+  --yellow: #ffd54f;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.subtitle { color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+.search-box {
+  position: relative;
+  margin-bottom: 1.5rem;
+}
+.search-box input {
+  width: 100%;
+  padding: 0.9rem 1rem 0.9rem 2.8rem;
+  font-size: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  outline: none;
+  transition: border-color 0.2s;
+}
+.search-box input:focus { border-color: var(--accent); }
+.search-box input::placeholder { color: var(--text-muted); }
+.search-box .search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+  font-size: 1.1rem;
+}
+
+.stats-bar {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.5rem 0.9rem;
+  font-size: 0.85rem;
+}
+.stat .label { color: var(--text-muted); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat .value { font-weight: 600; margin-top: 2px; }
+
+.results-info {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.results { display: flex; flex-direction: column; gap: 1rem; }
+
+.item-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.item-header {
+  padding: 0.9rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  cursor: pointer;
+}
+.item-header:hover { background: var(--surface2); }
+.item-info { min-width: 0; flex: 1; }
+.item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  margin-bottom: 4px;
+}
+.item-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  display: flex;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.tag {
+  background: var(--border);
+  padding: 1px 7px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+}
+.tag-return {
+  background: rgba(239, 83, 80, 0.15);
+  color: var(--red);
+}
+.tag-purchase {
+  background: rgba(76, 175, 80, 0.15);
+  color: var(--green);
+}
+
+.item-summary {
+  text-align: right;
+  white-space: nowrap;
+}
+.item-summary .price {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: var(--green);
+}
+.item-summary .price-range {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.timeline {
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 1rem 0.75rem;
+}
+.timeline-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.82rem;
+  border-bottom: 1px solid var(--border);
+}
+.timeline-row:last-child { border-bottom: none; }
+.timeline-row .tl-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+}
+.timeline-row .tl-date { 
+  font-weight: 500;
+  min-width: 85px;
+}
+.timeline-row .tl-badge {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-weight: 600;
+  min-width: 55px;
+  text-align: center;
+}
+.tl-badge.purchase { background: rgba(76, 175, 80, 0.15); color: var(--green); }
+.tl-badge.return { background: rgba(239, 83, 80, 0.15); color: var(--red); }
+.timeline-row .tl-store {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.timeline-row .tl-price {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tl-price.positive { color: var(--green); }
+.tl-price.negative { color: var(--red); }
+.tl-price.zero { color: var(--text-muted); }
+
+.also-known {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 0 1rem 0.5rem;
+  font-style: italic;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+}
+.empty-state .big { font-size: 2.5rem; margin-bottom: 0.5rem; }
+
+@media (max-width: 600px) {
+  body { padding: 1rem 0.5rem; }
+  .stats-bar { gap: 0.5rem; }
+  .stat { padding: 0.4rem 0.6rem; }
+  .item-header { flex-direction: column; gap: 0.5rem; }
+  .item-summary { text-align: left; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🧾 Receipt Search</h1>
+  <p class="subtitle">Search Costco purchases by product name or item number — shows full buy/return timeline</p>
+
+  <div class="search-box">
+    <span class="search-icon">🔍</span>
+    <input type="text" id="searchInput" placeholder="Search items... (e.g. 'henckels', '1816600', 'salmon', 'kirkland')" autofocus>
+  </div>
+
+  <div class="stats-bar" id="statsBar"></div>
+  <div class="results-info" id="resultsInfo"></div>
+  <div class="results" id="results">
+    <div class="empty-state">
+      <div class="big">🛒</div>
+      <p>Start typing to search your purchase history</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let debounceTimer;
+const searchInput = document.getElementById('searchInput');
+const resultsDiv = document.getElementById('results');
+const resultsInfo = document.getElementById('resultsInfo');
+const statsBar = document.getElementById('statsBar');
+
+fetch('/api/stats')
+  .then(r => r.json())
+  .then(s => {
+    statsBar.innerHTML = `
+      <div class="stat"><div class="label">Purchases</div><div class="value">${s.total_receipts}</div></div>
+      <div class="stat"><div class="label">Returns</div><div class="value">${s.total_returns}</div></div>
+      <div class="stat"><div class="label">Unique Items</div><div class="value">${s.unique_items}</div></div>
+      <div class="stat"><div class="label">Spent</div><div class="value">$${s.total_spent.toLocaleString(undefined, {maximumFractionDigits: 0})}</div></div>
+      <div class="stat"><div class="label">Returned</div><div class="value">$${s.total_returned.toLocaleString(undefined, {maximumFractionDigits: 0})}</div></div>
+      <div class="stat"><div class="label">Since</div><div class="value">${s.date_range.earliest}</div></div>
+    `;
+  });
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(doSearch, 250);
+});
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { clearTimeout(debounceTimer); doSearch(); }
+});
+
+function doSearch() {
+  const q = searchInput.value.trim();
+  if (!q) {
+    resultsDiv.innerHTML = '<div class="empty-state"><div class="big">🛒</div><p>Start typing to search your purchase history</p></div>';
+    resultsInfo.textContent = '';
+    return;
+  }
+
+  fetch(`/api/search?q=${encodeURIComponent(q)}`)
+    .then(r => r.json())
+    .then(data => {
+      const groups = data.groups || [];
+      const ungrouped = data.ungrouped || [];
+
+      if (groups.length === 0 && ungrouped.length === 0) {
+        resultsDiv.innerHTML = '<div class="empty-state"><div class="big">🤷</div><p>No matching purchases found</p></div>';
+        resultsInfo.textContent = '';
+        return;
+      }
+
+      resultsInfo.textContent = `${groups.length} item${groups.length !== 1 ? 's' : ''} found`;
+
+      let html = '';
+      groups.forEach(group => {
+        const priceDisplay = group.avg_price ? `$${group.avg_price.toFixed(2)}` : '—';
+        const priceRange = (group.min_price && group.max_price && group.min_price !== group.max_price)
+          ? `$${group.min_price.toFixed(2)} – $${group.max_price.toFixed(2)}`
+          : '';
+
+        html += `<div class="item-group">
+          <div class="item-header" onclick="this.parentElement.querySelector('.timeline').classList.toggle('collapsed')">
+            <div class="item-info">
+              <div class="item-name">${escapeHtml(group.name)}</div>
+              <div class="item-meta">
+                <span class="tag">#${group.item_number}</span>
+                ${group.department ? `<span class="tag">Dept ${group.department}</span>` : ''}
+                <span class="tag tag-purchase">🛒 ${group.purchase_count}×</span>
+                ${group.return_count > 0 ? `<span class="tag tag-return">↩️ ${group.return_count}×</span>` : ''}
+                ${group.first_purchased ? `<span>${group.first_purchased} → ${group.last_purchased}</span>` : ''}
+              </div>
+            </div>
+            <div class="item-summary">
+              <div class="price">${priceDisplay}</div>
+              ${priceRange ? `<div class="price-range">${priceRange}</div>` : ''}
+            </div>
+          </div>`;
+
+        // Show alternate names
+        if (group.all_names.length > 1) {
+          const otherNames = group.all_names.filter(n => n !== group.name).map(escapeHtml).join(', ');
+          html += `<div class="also-known">Also listed as: ${otherNames}</div>`;
+        }
+
+        // Timeline
+        html += `<div class="timeline">`;
+        group.transactions.forEach(t => {
+          const price = t.total_price || t.unit_price || 0;
+          const absPrice = Math.abs(price);
+          const priceClass = price < 0 ? 'negative' : (price === 0 ? 'zero' : 'positive');
+          const discountNote = t.discount ? ` (−$${t.discount.toFixed(2)})` : '';
+          const priceStr = price < 0 ? `-$${absPrice.toFixed(2)}` : (price === 0 ? '$0.00' : `$${absPrice.toFixed(2)}${discountNote}`);
+          const badge = t.type === 'return' ? '<span class="tl-badge return">RETURN</span>' : '<span class="tl-badge purchase">BUY</span>';
+          const store = t.store_location || t.store_name || '';
+          const qty = t.quantity && t.quantity !== 1 ? ` × ${t.quantity}` : '';
+
+          html += `<div class="timeline-row">
+            <div class="tl-left">
+              <span class="tl-date">${t.purchase_date}</span>
+              ${badge}
+              <span class="tl-store">${escapeHtml(store)}</span>
+            </div>
+            <span class="tl-price ${priceClass}">${priceStr}${qty}</span>
+          </div>`;
+        });
+        html += `</div></div>`;
+      });
+
+      // Ungrouped items (no item_number)
+      if (ungrouped.length > 0) {
+        html += `<div class="item-group"><div class="item-header"><div class="item-info"><div class="item-name" style="color:var(--text-muted)">Items without item numbers</div></div></div><div class="timeline">`;
+        ungrouped.forEach(t => {
+          const price = t.total_price || t.unit_price || 0;
+          html += `<div class="timeline-row">
+            <div class="tl-left">
+              <span class="tl-date">${t.purchase_date}</span>
+              <span class="tl-store">${escapeHtml(t.item_name)}</span>
+            </div>
+            <span class="tl-price ${price < 0 ? 'negative' : 'positive'}">$${Math.abs(price).toFixed(2)}</span>
+          </div>`;
+        });
+        html += `</div></div>`;
+      }
+
+      resultsDiv.innerHTML = html;
+    });
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text || '';
+  return div.innerHTML;
+}
+</script>
+</body>
+</html>

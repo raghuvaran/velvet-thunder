@@ -1,16 +1,10 @@
-# velvet-thunder: encrypted vault data ONLY
+# velvet-thunder: encrypted vault data + static UI ONLY
 # Reject everything except what's explicitly allowed
 
-# Block all source code
+# Block all source code (backend scripts)
 *.py
-*.js
 *.mjs
 *.ts
-*.html
-*.css
-*.json
-*.yaml
-*.yml
 *.toml
 
 # Block databases
@@ -25,3 +19,8 @@
 *.secret
 *.token
 *.key
+
+# Block config/data files
+*.json
+*.yaml
+*.yml
