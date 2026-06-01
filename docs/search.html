@@ -290,7 +290,7 @@ function doSearch() {
   const groups = [];
   for (const itemNum of itemNumbers.slice(0, 50)) {
     const rows = db.exec(`
-      SELECT li.item_name, li.item_number, li.unit_price, li.total_price, li.quantity, li.department,
+      SELECT li.item_name, li.item_number, li.unit_price, li.total_price, li.quantity, li.department, li.discount,
              r.purchase_date, r.store_name, r.store_location, r.total as receipt_total, r.notes, r.source
       FROM line_items li JOIN receipts r ON r.id = li.receipt_id
       WHERE li.item_number = ?
@@ -317,7 +317,7 @@ function doSearch() {
 
     const purchases = transactions.filter(t => t.type === 'purchase');
     const returns = transactions.filter(t => t.type === 'return');
-    const prices = purchases.map(t => Math.abs(t.unit_price || t.total_price || 0)).filter(p => p > 0);
+    const prices = purchases.map(t => Math.abs(t.total_price || t.unit_price || 0)).filter(p => p > 0);
     const avgPrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
 
     groups.push({
@@ -371,10 +371,11 @@ function renderGroup(g) {
 
   html += `<div class="timeline">`;
   g.transactions.forEach(t => {
-    const price = t.unit_price || t.total_price || 0;
+    const price = t.total_price || t.unit_price || 0;
     const absPrice = Math.abs(price);
     const priceClass = price < 0 ? 'negative' : (price === 0 ? 'zero' : 'positive');
-    const priceStr = price < 0 ? `-$${absPrice.toFixed(2)}` : (price === 0 ? '$0.00' : `$${absPrice.toFixed(2)}`);
+    const discountNote = t.discount ? ` (−$${t.discount.toFixed(2)})` : '';
+    const priceStr = price < 0 ? `-$${absPrice.toFixed(2)}` : (price === 0 ? '$0.00' : `$${absPrice.toFixed(2)}${discountNote}`);
     const badge = t.type === 'return' ? '<span class="tl-badge return">RETURN</span>' : '<span class="tl-badge purchase">BUY</span>';
     const store = t.store_location || t.store_name || '';
     const qty = t.quantity && t.quantity !== 1 ? ` × ${t.quantity}` : '';
@@ -384,10 +385,10 @@ function renderGroup(g) {
     </div>`;
   });
   // Price chart for items with multiple purchases
-  const purchaseTxns = g.transactions.filter(t => t.type === 'purchase' && (t.unit_price || t.total_price) > 0).reverse();
+  const purchaseTxns = g.transactions.filter(t => t.type === 'purchase' && (t.total_price || t.unit_price) > 0).reverse();
   if (purchaseTxns.length >= 2) {
     const chartLabels = JSON.stringify(purchaseTxns.map(t => t.purchase_date));
-    const chartPrices = JSON.stringify(purchaseTxns.map(t => Math.abs(t.unit_price || t.total_price)));
+    const chartPrices = JSON.stringify(purchaseTxns.map(t => Math.abs(t.total_price || t.unit_price)));
     html += `<div class="price-chart-container"><canvas class="price-chart-canvas" height="100" data-labels='${chartLabels}' data-prices='${chartPrices}'></canvas></div>`;
   }
 
