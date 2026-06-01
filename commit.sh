@@ -7,15 +7,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# Regenerate prices.db from latest receipts data
-python3 /root/.openclaw/workspace/receipts/generate-prices-db.py
+# Regenerate prices DB
+${RECEIPTS_TOOLS_DIR:-../receipts}/generate-prices-db.py
 
 # Encrypt both DBs
 bash encrypt.sh
 
 # Stage and commit
 git add data/vault.enc data/prices.enc
-git add -A docs/
+git add -A docs/ ui/
 
 # Fun commit messages that reveal nothing
 FUN_MSGS=(
