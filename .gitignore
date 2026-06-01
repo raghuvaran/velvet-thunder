@@ -1,4 +1,27 @@
-# Ignore unencrypted database files
+# velvet-thunder: encrypted vault data ONLY
+# Reject everything except what's explicitly allowed
+
+# Block all source code
+*.py
+*.js
+*.mjs
+*.ts
+*.html
+*.css
+*.json
+*.yaml
+*.yml
+*.toml
+
+# Block databases
 *.db
 *.sqlite
-backups/
+
+# Block logs/state
+*.log
+*.pid
+
+# Block secrets
+*.secret
+*.token
+*.key
