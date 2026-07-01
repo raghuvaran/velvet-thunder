@@ -317,7 +317,16 @@ function doSearch() {
 
     const purchases = transactions.filter(t => t.type === 'purchase');
     const returns = transactions.filter(t => t.type === 'return');
-    const prices = purchases.map(t => Math.abs(t.total_price || t.unit_price || 0)).filter(p => p > 0);
+    // Per-item unit price: prefer explicit unit_price, else derive total/quantity
+    const unitPriceOf = (t) => {
+      const up = t.unit_price, qty = Math.abs(t.quantity || 0), tp = t.total_price;
+      if (up) return Math.abs(up);
+      if (tp && qty) return Math.abs(tp) / qty;
+      if (tp) return Math.abs(tp);
+      return 0;
+    };
+    transactions.forEach(t => { t.unit_price_eff = Math.round(unitPriceOf(t) * 100) / 100; });
+    const prices = purchases.map(unitPriceOf).filter(p => p > 0);
     const avgPrice = prices.length ? prices.reduce((a, b) => a + b, 0) / prices.length : null;
 
     groups.push({
@@ -371,24 +380,27 @@ function renderGroup(g) {
 
   html += `<div class="timeline">`;
   g.transactions.forEach(t => {
-    const price = t.total_price || t.unit_price || 0;
-    const absPrice = Math.abs(price);
-    const priceClass = price < 0 ? 'negative' : (price === 0 ? 'zero' : 'positive');
+    const qtyAbs = Math.abs(t.quantity || 0);
+    const lineTotal = Math.abs(t.total_price || 0);
+    const unit = (t.unit_price_eff != null ? t.unit_price_eff : Math.abs(t.unit_price || t.total_price || 0));
+    const isNeg = (t.total_price || t.unit_price || 0) < 0;
+    const isZero = unit === 0;
+    const priceClass = isNeg ? 'negative' : (isZero ? 'zero' : 'positive');
     const discountNote = t.discount ? ` (−$${t.discount.toFixed(2)})` : '';
-    const priceStr = price < 0 ? `-$${absPrice.toFixed(2)}` : (price === 0 ? '$0.00' : `$${absPrice.toFixed(2)}${discountNote}`);
+    const priceStr = isNeg ? `-$${unit.toFixed(2)}` : (isZero ? '$0.00' : `$${unit.toFixed(2)}${discountNote}`);
     const badge = t.type === 'return' ? '<span class="tl-badge return">RETURN</span>' : '<span class="tl-badge purchase">BUY</span>';
     const store = t.store_location || t.store_name || '';
-    const qty = t.quantity && t.quantity !== 1 ? ` × ${t.quantity}` : '';
+    const qtyNote = qtyAbs > 1 ? ` <span style="color:var(--text-muted);font-weight:400">(${qtyAbs} × = $${lineTotal.toFixed(2)})</span>` : '';
     html += `<div class="timeline-row">
       <div class="tl-left"><span class="tl-date">${t.purchase_date}</span>${badge}<span class="tl-store">${esc(store)}</span></div>
-      <span class="tl-price ${priceClass}">${priceStr}${qty}</span>
+      <span class="tl-price ${priceClass}">${priceStr}${qtyNote}</span>
     </div>`;
   });
-  // Price chart for items with multiple purchases
-  const purchaseTxns = g.transactions.filter(t => t.type === 'purchase' && (t.total_price || t.unit_price) > 0).reverse();
+  // Price chart for items with multiple purchases (per-unit price)
+  const purchaseTxns = g.transactions.filter(t => t.type === 'purchase' && (t.unit_price_eff || 0) > 0).reverse();
   if (purchaseTxns.length >= 2) {
     const chartLabels = JSON.stringify(purchaseTxns.map(t => t.purchase_date));
-    const chartPrices = JSON.stringify(purchaseTxns.map(t => Math.abs(t.total_price || t.unit_price)));
+    const chartPrices = JSON.stringify(purchaseTxns.map(t => t.unit_price_eff));
     html += `<div class="price-chart-container"><canvas class="price-chart-canvas" height="100" data-labels='${chartLabels}' data-prices='${chartPrices}'></canvas></div>`;
   }
 
